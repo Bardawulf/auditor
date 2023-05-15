@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-let mode = 'heroku';
+let mode = 'localhost';
 
 if (mode == 'localhost') {
     axios.defaults.baseURL = 'http://localhost:8080/';
