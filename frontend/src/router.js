@@ -1,11 +1,11 @@
 import Vue from 'vue'
 import Router from 'vue-router'
+import store from '@/store' // Import your Vuex store
 
 Vue.use(Router)
 
-export default new Router({
- //  mode: 'hash',
-    mode: 'history',
+export const router = new Router({
+  mode: 'history',
   base: process.env.BASE_URL,
   routes: [
     {
@@ -16,6 +16,7 @@ export default new Router({
           name: 'Curriculums',
           path: '/',
           component: () => import('@/views/Curriculum/List'),
+          meta: { requiresAuth: true } // Add requiresAuth meta field
         },
         {
           name: 'Curriculum',
@@ -23,10 +24,10 @@ export default new Router({
           component: () => import('@/views/Curriculum/Index'),
         },
         {
-            name: 'Curriculum-edit',
-            path: '/curriculum/edit/:id',
-            props: route => ({ action: route.query.action }),
-            component: () => import('@/views/Curriculum/Edit'),
+          name: 'Curriculum-edit',
+          path: '/curriculum/edit/:id',
+          props: route => ({ action: route.query.action }),
+          component: () => import('@/views/Curriculum/Edit'),
         },
         {
           name: 'Curriculum-create',
@@ -81,8 +82,29 @@ export default new Router({
           name: 'Student manual',
           path: 'manual-student',
           component: () => import('@/views/manuals/Student')
-        }
+        },
+        {
+          name: 'Login',
+          path: '/login',
+          component: () => import('@/views/Login/Login'),
+        },
       ],
     },
   ],
 })
+
+
+
+
+// Navigation guard
+router.beforeEach((to, from, next) => {
+  const isAuthenticated = store.getters.isAuthenticated; // Assuming you have a getter in your Vuex store to check if the user is authenticated
+
+  if (to.name !== 'Login' && !isAuthenticated) {
+    next({ name: 'Login' }); // Redirect to the "Login" route if not authenticated
+  } else {
+    next(); // Proceed with the navigation
+  }
+})
+
+export default router;
