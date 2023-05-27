@@ -1,9 +1,11 @@
 package com.example.auditor.controller.report;
 
 import com.example.auditor.controller.transcript.TranscriptController;
+import com.example.auditor.domain.curriculum.Curriculum;
 import com.example.auditor.domain.report.StudentReport;
 import com.example.auditor.domain.transcript.StudentRecord;
 import com.example.auditor.dto.StudentReportDto;
+import com.example.auditor.service.curriculum.CurriculumService;
 import com.example.auditor.service.report.ReportExportService;
 import com.example.auditor.service.report.StudentReportService;
 import com.example.auditor.service.transcript.TranscriptExportService;
@@ -33,6 +35,7 @@ public class StudentReportController {
     private final StudentReportService reportService;
     private final ReportExportService reportExportService;
     private final TranscriptService transcriptService;
+    private final CurriculumService curriculumService;
 
     @PostMapping
     public StudentReport create(@RequestBody
@@ -57,7 +60,9 @@ public class StudentReportController {
 
         StudentReport studentReport = reportService.getById(id);
 
-        File spreadsheet = reportExportService.buildSpreadsheet(optionalStudent.get(), studentReport);
+        Curriculum curriculum = curriculumService.getCurriculum(studentReport.getCurriculumId());
+
+        File spreadsheet = reportExportService.buildSpreadsheet(optionalStudent.get(), curriculum, studentReport);
         FileInputStream fileInputStream = new FileInputStream(spreadsheet);
 
         HttpHeaders headers = new HttpHeaders();
