@@ -1,6 +1,5 @@
 package com.example.auditor.controller.report;
 
-import com.example.auditor.controller.transcript.TranscriptController;
 import com.example.auditor.domain.curriculum.Curriculum;
 import com.example.auditor.domain.report.StudentReport;
 import com.example.auditor.domain.transcript.StudentRecord;
@@ -8,7 +7,6 @@ import com.example.auditor.dto.StudentReportDto;
 import com.example.auditor.service.curriculum.CurriculumService;
 import com.example.auditor.service.report.ReportExportService;
 import com.example.auditor.service.report.StudentReportService;
-import com.example.auditor.service.transcript.TranscriptExportService;
 import com.example.auditor.service.transcript.TranscriptService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
@@ -23,9 +21,12 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.sql.SQLOutput;
-import java.util.Map;
+import java.lang.reflect.Array;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
@@ -50,7 +51,7 @@ public class StudentReportController {
     }
 
     @GetMapping("{id}/export")
-    public ResponseEntity<Object> exportReport(@PathVariable Long id) throws IOException {
+    public ResponseEntity<Object> exportReportSingle(@PathVariable Long id) throws IOException {
 
         Optional<StudentRecord> optionalStudent = transcriptService.getByStudentId(id);
 
@@ -62,7 +63,7 @@ public class StudentReportController {
 
         Curriculum curriculum = curriculumService.getCurriculum(studentReport.getCurriculumId());
 
-        File spreadsheet = reportExportService.buildSpreadsheet(optionalStudent.get(), curriculum, studentReport);
+        File spreadsheet = reportExportService.buildSpreadsheetSingle(optionalStudent.get(), curriculum, studentReport);
         FileInputStream fileInputStream = new FileInputStream(spreadsheet);
 
         HttpHeaders headers = new HttpHeaders();
@@ -111,6 +112,87 @@ public class StudentReportController {
                     " Use 'report/batch/id1,id2,id3'");
         }
         return ResponseEntity.ok(reportService.getByIds(ids));
+    }
+
+    @GetMapping("batch/{ids}/export")
+    public ResponseEntity<Object> exportReportMulti(@PathVariable Long[] ids) throws IOException{
+
+        if (ids == null || ids.length == 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid student ids param." +
+                    " Use 'report/batch/id1,id2,id3/export'");
+        }
+
+        if (Arrays.stream(ids).anyMatch(Objects::isNull)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "One or more student ids are null.");
+        }
+
+        List<StudentRecord> students = transcriptService.getByStudentIds(ids);
+
+        if (students.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No students found with the provided IDs");
+        }
+
+        if (students.size() < ids.length) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Some students were not found");
+        }
+
+        List<StudentReport> studentReports = reportService.getByIds(ids);
+//        if (studentReports.size() < students.size()) {
+//            throw new ResponseStatusException(HttpStatus.CONFLICT, "Not all students have reports created");
+//        }
+
+        Long curriculumId = studentReports.get(0).getCurriculumId();
+        for (StudentReport studentReport : studentReports) {
+            if (!Objects.equals(studentReport.getCurriculumId(), curriculumId)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Not all students have the same curriculum linked");
+            }
+        }
+
+        Curriculum curriculum = curriculumService.getCurriculum(curriculumId);
+
+        File spreadsheet = reportExportService.buildSpreadsheetMulti(students, curriculum, studentReports);
+        FileInputStream fileInputStream = new FileInputStream(spreadsheet);
+
+        HttpHeaders headers = new HttpHeaders();
+
+        headers.add(
+                "Content-Disposition",
+                String.format("attachment; filename=\"%s\"", spreadsheet.getName())
+        );
+
+        headers.add(
+                "Access-Control-Expose-Headers",
+                "content-disposition"
+        );
+
+        headers.add(
+                "Cache-Control",
+                "no-cache, no-store, must-revalidate"
+        );
+
+        headers.add(
+                "Pragma",
+                "no-cache"
+        );
+
+        headers.add(
+                "Expires",
+                "0"
+        );
+
+        // if some, but not all students were found by their IDs, return the spreadsheet with information regarding
+        // only those found students, but use status code 207 - MULTI STATUS
+//        int status = (students.size() < ids.length) ? HttpStatus.MULTI_STATUS.value() : HttpStatus.OK.value();
+
+        ResponseEntity<Object> responseEntity = ResponseEntity
+                .ok().headers(headers)
+//                .status(status).headers(headers)
+                .contentLength(spreadsheet.length())
+                .contentType(MediaType.parseMediaType("application/txt"))
+                .body(new InputStreamResource(fileInputStream));
+
+
+        return responseEntity;
     }
 
     @PostMapping("{reportId}/detachCourses")

@@ -2,19 +2,15 @@ package com.example.auditor.service.report;
 
 import com.example.auditor.domain.curriculum.Curriculum;
 import com.example.auditor.domain.curriculum.Requirement;
-import com.example.auditor.domain.report.ReportRequirement;
 import com.example.auditor.domain.report.ReportRequirementWithCourse;
 import com.example.auditor.domain.report.ReportTermCourse;
 import com.example.auditor.domain.report.StudentReport;
 import com.example.auditor.domain.transcript.StudentRecord;
-import com.example.auditor.domain.transcript.StudentTerm;
-import com.example.auditor.domain.transcript.TermCourse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
-import org.apache.poi.xssf.usermodel.XSSFCellStyle;
-import org.apache.poi.xssf.usermodel.XSSFColor;
+import org.apache.poi.ss.util.RegionUtil;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.util.Pair;
@@ -24,6 +20,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
@@ -37,54 +34,40 @@ public class ReportExportService {
     @Value("${audit.parser.requirements-row-terminator}")
     private String requirementsRowTerminator;
 
-    private XSSFWorkbook workbook;
 
+    public File buildSpreadsheetSingle(StudentRecord studentRecord, Curriculum curriculum, StudentReport studentReport) throws IOException {
+        String filename = "audit " + studentRecord.getName() + " " + curriculum.getMajor() + ".xlsx";
+        List<StudentRecord> students = List.of(studentRecord);
+        List<StudentReport> studentReports = List.of(studentReport);
 
-    public File buildSpreadsheet(StudentRecord studentRecord, Curriculum curriculum, StudentReport studentReport) throws IOException {
+        return buildSpreadsheet(students, curriculum, studentReports, filename);
+    }
 
-        workbook = new XSSFWorkbook();
+    public File buildSpreadsheetMulti(List<StudentRecord> students, Curriculum curriculum, List<StudentReport> studentReports) throws IOException {
+        String filename = "audit-multi " + curriculum.getMajor() + ".xlsx";
 
-        Font bold = workbook.createFont();
-        bold.setBold(true);
+        return buildSpreadsheet(students, curriculum, studentReports, filename);
+    }
 
-//        XSSFColor color = new XSSFColor(new java.awt.Color(239, 195, 239));
+    private File buildSpreadsheet(List<StudentRecord> students, Curriculum curriculum, List<StudentReport> studentReports, String filename) throws IOException {
+        XSSFWorkbook workbook = new XSSFWorkbook();
 
-        CellStyle cellStyleBoldCentered = workbook.createCellStyle();
-        cellStyleBoldCentered.setAlignment(HorizontalAlignment.CENTER);
-        cellStyleBoldCentered.setFont(bold);
+//        createStudentInformationSheet(students, workbook);
+        createAuditSheet(workbook, students, curriculum, studentReports);
 
-        CellStyle cellStyleCentered = workbook.createCellStyle();
-        cellStyleCentered.setAlignment(HorizontalAlignment.CENTER);
+        File spreadsheet = new File(filename);
 
-        CellStyle cellStyleCenteredAndBackgroundOdd = workbook.createCellStyle();
-        cellStyleCenteredAndBackgroundOdd.setAlignment(HorizontalAlignment.CENTER);
-        cellStyleCenteredAndBackgroundOdd.setFillForegroundColor(IndexedColors.LIGHT_TURQUOISE.getIndex());
-        cellStyleCenteredAndBackgroundOdd.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        FileOutputStream fileOutputStream = new FileOutputStream(spreadsheet);
 
-        CellStyle cellStyleCenteredAndBorderRightBold = workbook.createCellStyle();
-        cellStyleCenteredAndBorderRightBold.setAlignment(HorizontalAlignment.CENTER);
-        cellStyleCenteredAndBorderRightBold.setBorderRight(BorderStyle.THICK);
+        workbook.write(fileOutputStream);
+        workbook.close();
+        fileOutputStream.close();
 
-        CellStyle cellStyleCenteredAndBorderRight = workbook.createCellStyle();
-        cellStyleCenteredAndBorderRight.setAlignment(HorizontalAlignment.CENTER);
-        cellStyleCenteredAndBorderRight.setBorderRight(BorderStyle.THIN);
+        return spreadsheet;
+    }
 
-        CellStyle cellStyleCenteredAndBorderBottom = workbook.createCellStyle();
-        cellStyleCenteredAndBorderBottom.setAlignment(HorizontalAlignment.CENTER);
-        cellStyleCenteredAndBorderBottom.setBorderBottom(BorderStyle.THIN);
-
-        CellStyle cellStyleBoldCenteredAndBorderBottom = workbook.createCellStyle();
-        cellStyleBoldCenteredAndBorderBottom.setFont(bold);
-        cellStyleBoldCenteredAndBorderBottom.setAlignment(HorizontalAlignment.CENTER);
-        cellStyleBoldCenteredAndBorderBottom.setBorderBottom(BorderStyle.THIN);
-
-        CellStyle cellStyleBoldCenteredAndBorderBottomAndBorderRight = workbook.createCellStyle();
-        cellStyleBoldCenteredAndBorderBottomAndBorderRight.setFont(bold);
-        cellStyleBoldCenteredAndBorderBottomAndBorderRight.setAlignment(HorizontalAlignment.CENTER);
-        cellStyleBoldCenteredAndBorderBottomAndBorderRight.setBorderBottom(BorderStyle.THIN);
-        cellStyleBoldCenteredAndBorderBottomAndBorderRight.setBorderRight(BorderStyle.THICK);
-
-        Sheet sheetGeneral = workbook.createSheet("general");
+    private void createStudentInformationSheet(StudentRecord studentRecord, XSSFWorkbook workbook) {
+        Sheet sheet = workbook.createSheet("student info");
 
         ArrayList<Pair<String, String>> generalInformation = new ArrayList<Pair<String, String>>();
         // Strings
@@ -101,177 +84,465 @@ public class ReportExportService {
         generalInformation.add(Pair.of("credits Graded Total", studentRecord.getCreditsGradedTotal().toString()));
         generalInformation.add(Pair.of("Current Semester", studentRecord.getCurrentSemester().toString()));
 
-        int rowNumGeneral = 0;
+        CellStyle cellStyleCentered = workbook.createCellStyle();
+        cellStyleCentered.setAlignment(HorizontalAlignment.CENTER);
+
+        int rowNum = 0;
         for (Pair<String, String> row : generalInformation) {
-            Row sheetRow = sheetGeneral.createRow(rowNumGeneral);
+            Row sheetRow = sheet.createRow(rowNum++);
             sheetRow.createCell(0).setCellValue(row.getFirst());
             sheetRow.createCell(1).setCellValue(row.getSecond());
-            rowNumGeneral += 1;
+//            System.out.println("inline... before:");
+//            System.out.println(sheetRow.getCell(0).getCellStyle());
+//            System.out.println(sheetRow.getCell(1).getCellStyle());
+            sheetRow.getCell(0).setCellStyle(cellStyleCentered);
+            sheetRow.getCell(1).setCellStyle(cellStyleCentered);
+//            System.out.println("after:");
+//            System.out.println(sheetRow.getCell(0).getCellStyle());
+//            System.out.println(sheetRow.getCell(1).getCellStyle());
+//            setCenteredText(sheetRow.getCell(0));
+//            setCenteredText(sheetRow.getCell(1));
         }
 
         for (int i=0; i<=1; i++) {
-
-            sheetGeneral.autoSizeColumn(i);
+            sheet.autoSizeColumn(i);
         }
+    }
 
-        // =================================== TERMS =======================================
-
-//        Sheet sheetTerms = workbook.createSheet("terms");
-//
-//        int rowNumTerms = 0;
-//        for (StudentTerm studentTerm : studentRecord.getStudentTerms()) {
-//            Row termTitleRow = sheetTerms.createRow(rowNumTerms);
-//            Cell titleCell = termTitleRow.createCell(0);
-//            titleCell.setCellStyle(cellStyleBoldCentered);
-//            titleCell.setCellValue(studentTerm.getName());
-//            rowNumTerms += 1;
-//
-//            for (TermCourse termCourse : studentTerm.getTermCourses()) {
-//                Row courseRow = sheetTerms.createRow(rowNumTerms);
-//                courseRow.createCell(0).setCellValue(termCourse.getCode());
-//                courseRow.createCell(1).setCellValue(termCourse.getCredits());
-//                courseRow.createCell(2).setCellValue(termCourse.getGradePoint());
-//                courseRow.createCell(3).setCellValue(termCourse.getLetterGradeLiteral());
-//                rowNumTerms += 1;
-//            }
-//        }
-
-        // ================================= AUDIT v1 ========== only complete requirements
-
-//        Sheet sheetAudit = workbook.createSheet("audit");
-//
-//        Row auditTitleRow = sheetAudit.createRow(0);
-//        auditTitleRow.createCell(0).setCellValue("Required Course");
-//        auditTitleRow.createCell(1).setCellValue("Credits");
-//        auditTitleRow.createCell(2).setCellValue("Taken");
-//        auditTitleRow.createCell(3).setCellValue("Credits");
-//        auditTitleRow.createCell(4).setCellValue("Grade Points");
-//        auditTitleRow.createCell(5).setCellValue("Letter Grade");
-//        for (int i=0; i<=5; i++) {
-//            auditTitleRow.getCell(i).setCellStyle(cellStyleBoldCentered);
-//        }
-//
-//        int rowNumAudit = 1;
-//        for (ReportRequirementWithCourse completeRequirement : studentReport.getCompleteRequirements()) {
-//            Row requirementRow = sheetAudit.createRow(rowNumAudit);
-//            ReportRequirement requirement = completeRequirement.getRequirement();
-//            ReportTermCourse course = completeRequirement.getCourse();
-//            requirementRow.createCell(0).setCellValue(requirement.getName());
-//            requirementRow.createCell(1).setCellValue(requirement.getCredit());
-//            String taken = course.getCode();
-//            if (taken.equals(requirement.getPatterns())) {
-//                taken = "✔";
-//            }
-//            requirementRow.createCell(2).setCellValue(taken);
-//            requirementRow.createCell(3).setCellValue(course.getCredits());
-//            requirementRow.createCell(4).setCellValue(course.getGradePoint());
-//            requirementRow.createCell(5).setCellValue(course.getLetterGrade());
-//            for (int i=1; i<=5; i++) {
-//                requirementRow.getCell(i).setCellStyle(cellStyleCentered);
-//            }
-//            rowNumAudit += 1;
-//        }
-//
-//        for (int i=0; i<=5; i++) {
-//            sheetAudit.autoSizeColumn(i);
-//        }
-
-        // =========================== AUDIT v2 ====== ALL REQUIREMENTS ON ONE SHEET ===========
-
-        Sheet sheetAudit = workbook.createSheet("audit");
-        int rowNumAudit = 0;
+    private void createAuditSheet(XSSFWorkbook workbook, List<StudentRecord> students, Curriculum curriculum, List<StudentReport> studentReports) {
+        Sheet sheet = workbook.createSheet("audit");
+        int studentsCount = students.size();
+        int rowNum = 0;
         int totalCurriculumCredits = 0;
         int totalStudentTranscriptCredits = 0;
 
-        Row auditStudentsNameRow = sheetAudit.createRow(rowNumAudit++);
-        auditStudentsNameRow.createCell(1).setCellStyle(cellStyleCenteredAndBorderRightBold);
-        auditStudentsNameRow.createCell(2).setCellValue(studentRecord.getName());
-        auditStudentsNameRow.getCell(2).setCellStyle(cellStyleBoldCentered);
-        sheetAudit.addMergedRegion(new CellRangeAddress(rowNumAudit-1, rowNumAudit-1, 2, 5));
+        System.out.println("START SHEET");
 
-        Row auditTitleRow = sheetAudit.createRow(rowNumAudit++);
-        auditTitleRow.createCell(0).setCellValue("Required Course");
-        auditTitleRow.createCell(1).setCellValue("Credits");
-        auditTitleRow.createCell(2).setCellValue("Taken");
-        auditTitleRow.createCell(3).setCellValue("Credits");
-        auditTitleRow.createCell(4).setCellValue("Grade Points");
-        auditTitleRow.createCell(5).setCellValue("Letter Grade");
-        for (int i=0; i<=5; i++) {
-            auditTitleRow.getCell(i).setCellStyle(cellStyleBoldCenteredAndBorderBottom);
+        Row curriculumAndStudentNamesRow = sheet.createRow(rowNum);
+        Cell curriculumName = curriculumAndStudentNamesRow.createCell(0);
+        curriculumName.setCellValue("Curriculum: " + curriculum.getMajor());
+        sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0, 1));
+        setBoldFont(curriculumName);
+        setCenteredText(curriculumName);
+        for (int i=0; i<studentsCount; i++) {
+            Cell studentName = curriculumAndStudentNamesRow.createCell(2 + 4*i);
+            studentName.setCellValue(students.get(i).getName());
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 2 + 4*i, 5 + 4*i));
+            setBoldFont(studentName);
+            setCenteredText(studentName);
         }
-        auditTitleRow.getCell(1).setCellStyle(cellStyleBoldCenteredAndBorderBottomAndBorderRight);
+        rowNum++;
 
-        List<ReportRequirementWithCourse> studentCompleteRequrements = studentReport.getCompleteRequirements();
+        Row columnNamesRow = sheet.createRow(rowNum++);
+        columnNamesRow.createCell(0).setCellValue("Required Course");
+        columnNamesRow.createCell(1).setCellValue("Credits");
+        for (int i=0; i<studentsCount; i++) {
+            columnNamesRow.createCell(2 + 4*i).setCellValue("Taken");
+            columnNamesRow.createCell(3 + 4*i).setCellValue("Credits");
+            columnNamesRow.createCell(4 + 4*i).setCellValue("Grade Points");
+            columnNamesRow.createCell(5 + 4*i).setCellValue("Letter Grade");
+        }
+        for (int i=0; i<2 + 4*studentsCount; i++) {
+            setBoldFont(columnNamesRow.getCell(i));
+            setCenteredText(columnNamesRow.getCell(i));
+        }
 
+        System.out.println("START COMPLETE REQUIREMENTS");
+
+        ArrayList<List<ReportRequirementWithCourse>> studentsCompleteRequrements = new ArrayList<List<ReportRequirementWithCourse>>();
+        for (int i=0; i<studentsCount; i++) {
+            studentsCompleteRequrements.add(studentReports.get(i).getCompleteRequirements());
+        }
+
+        ArrayList<Long> alreadyUsedCoursesIds = new ArrayList<>();
         for (Requirement requirement : curriculum.getRequirements()) {
-            Row requirementRow = sheetAudit.createRow(rowNumAudit++);
+            Row requirementRow = sheet.createRow(rowNum++);
             requirementRow.createCell(0).setCellValue(requirement.getName());
             requirementRow.createCell(1).setCellValue(requirement.getCredit());
+            setCenteredText(requirementRow.getCell(1));
             totalCurriculumCredits += requirement.getCredit();
-            Boolean isRequirementCompleted = false;
-            for (ReportRequirementWithCourse completeRequirement : studentCompleteRequrements) {
-                if (completeRequirement.getRequirement().getName().equals(requirement.getName())) {
-                    isRequirementCompleted = true;
-                    ReportTermCourse course = completeRequirement.getCourse();
-                    totalStudentTranscriptCredits += course.getCredits();
-                    String taken = course.getCode();
-                    if (taken.equals(requirement.getPatterns())) {
-                        taken = "✔";
+
+            for (int i=0; i<studentsCount; i++) {
+                boolean isRequirementCompleted = false;
+                for (ReportRequirementWithCourse completeRequirement : studentsCompleteRequrements.get(i)) {
+                    if (completeRequirement.getRequirement().getName().equals(requirement.getName())) {
+                        if (!alreadyUsedCoursesIds.contains(completeRequirement.getCourse().getId())) {
+                            alreadyUsedCoursesIds.add(completeRequirement.getCourse().getId());
+                        }
+                        else {
+                            continue;
+                        }
+                        isRequirementCompleted = true;
+                        ReportTermCourse course = completeRequirement.getCourse();
+                        totalStudentTranscriptCredits += course.getCredits();
+                        String taken = course.getCode();
+                        if (taken.equals(requirement.getPatterns())) {
+                            taken = "✔";
+                        }
+                        requirementRow.createCell(2 + 4*i).setCellValue(taken);
+                        requirementRow.createCell(3 + 4*i).setCellValue(course.getCredits());
+                        requirementRow.createCell(4 + 4*i).setCellValue(course.getGradePoint());
+                        requirementRow.createCell(5 + 4*i).setCellValue(course.getLetterGrade());
+                        break;
                     }
-                    requirementRow.createCell(2).setCellValue(taken);
-                    requirementRow.createCell(3).setCellValue(course.getCredits());
-                    requirementRow.createCell(4).setCellValue(course.getGradePoint());
-                    requirementRow.createCell(5).setCellValue(course.getLetterGrade());
-                    break;
+                }
+                if (!isRequirementCompleted) {
+                    requirementRow.createCell(2 + 4*i).setCellValue("-");
+                    requirementRow.createCell(3 + 4*i).setCellValue("-");
+                    requirementRow.createCell(4 + 4*i).setCellValue("-");
+                    requirementRow.createCell(5 + 4*i).setCellValue("-");
+                }
+                for (int j=2 + 4*i; j<=5 + 4*i; j++) {
+                    setCenteredText(requirementRow.getCell(j));
+                    if (i % 2 == 0) {
+                        setBackgroundStudentEven(requirementRow.getCell(j));
+                    }
+                    else {
+                        setBackgroundStudentOdd(requirementRow.getCell(j));
+                    }
                 }
             }
-            if (!isRequirementCompleted) {
-                requirementRow.createCell(2).setCellValue("-");
-                requirementRow.createCell(3).setCellValue("-");
-                requirementRow.createCell(4).setCellValue("-");
-                requirementRow.createCell(5).setCellValue("-");
+        }
+
+        System.out.println("START FAILED COURSES");
+
+        Row auditFailedCoursesRow = sheet.createRow(rowNum);
+        setBackground(auditFailedCoursesRow.createCell(0), IndexedColors.GREY_25_PERCENT.getIndex());
+        setBackground(auditFailedCoursesRow.createCell(1), IndexedColors.GREY_25_PERCENT.getIndex());
+        int failedCoursesTopRowNum = rowNum;
+
+        int maxFailedCoursesCount = 1;
+        for (StudentReport studentReport : studentReports) {
+            maxFailedCoursesCount = Math.max(studentReport.getFailedCourses().size(), maxFailedCoursesCount);
+        }
+        int failedCoursesBottomRowNum = failedCoursesTopRowNum + maxFailedCoursesCount;
+
+        for (int i=0; i<studentsCount; i++) {
+            rowNum = failedCoursesTopRowNum;
+            Cell failedCoursesTitle = auditFailedCoursesRow.createCell(2 + 4*i);
+            failedCoursesTitle.setCellValue("Failed courses");
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 2 + 4*i, 5 + 4*i));
+            setBackground(failedCoursesTitle, IndexedColors.GREY_25_PERCENT.getIndex());
+            rowNum++;
+
+            System.out.println("checking student "+i);
+            if (studentReports.get(i).getFailedCourses().isEmpty()) {
+                System.out.println("failed is empty");
+//                Row failedCourseRow = sheet.createRow(rowNum++);
+                Row failedCourseRow = sheet.getRow(rowNum);
+                if (failedCourseRow == null) {
+                    failedCourseRow = sheet.createRow(rowNum);
+                }
+                setBackground(failedCourseRow.createCell(0), IndexedColors.GREY_25_PERCENT.getIndex());
+                setBackground(failedCourseRow.createCell(1), IndexedColors.GREY_25_PERCENT.getIndex());
+                failedCourseRow.createCell(2 + 4*i).setCellValue("None");
+                failedCourseRow.createCell(3 + 4*i);
+                failedCourseRow.createCell(4 + 4*i);
+                failedCourseRow.createCell(5 + 4*i);
+
             }
-            requirementRow.getCell(1).setCellStyle(cellStyleCenteredAndBorderRightBold);
-            for (int i=2; i<=5; i++) {
-                requirementRow.getCell(i).setCellStyle(cellStyleCenteredAndBackgroundOdd);
+            else {
+                for (ReportTermCourse failedCourse : studentReports.get(i).getFailedCourses()) {
+                    Row failedCourseRow = sheet.getRow(rowNum);
+                    if (failedCourseRow == null) {
+                        failedCourseRow = sheet.createRow(rowNum);
+                    }
+                    rowNum++;
+                    setBackground(failedCourseRow.createCell(0), IndexedColors.GREY_25_PERCENT.getIndex());
+                    setBackground(failedCourseRow.createCell(1), IndexedColors.GREY_25_PERCENT.getIndex());
+                    failedCourseRow.createCell(2 + 4*i).setCellValue(failedCourse.getCode());
+                    failedCourseRow.createCell(3 + 4*i).setCellValue(failedCourse.getCredits());
+                    failedCourseRow.createCell(4 + 4*i).setCellValue(failedCourse.getGradePoint());
+                    failedCourseRow.createCell(5 + 4*i).setCellValue(failedCourse.getLetterGrade());
+//                    failedCourseRow.createCell(10 + 4*i).setCellValue("TestNotEmpty");
+                    for (int j=2 + 4*i; j<=5 + 4*i; j++) {
+                        setCenteredText(failedCourseRow.getCell(j));
+                        if (i % 2 == 0) {
+                            setBackgroundStudentEven(failedCourseRow.getCell(j));
+                        }
+                        else {
+                            setBackgroundStudentOdd(failedCourseRow.getCell(j));
+                        }
+                    }
+                }
+            }
+            for (; rowNum <= failedCoursesBottomRowNum; rowNum++) {
+                Row fillerRow = sheet.getRow(rowNum);
+                if (fillerRow == null) {
+                    fillerRow = sheet.createRow(rowNum);
+                }
+                for (int j=2 + 4*i; j<=5 + 4*i; j++) {
+                    if (i % 2 == 0) {
+                        setBackgroundStudentEven(fillerRow.createCell(j));
+                    }
+                    else {
+                        setBackgroundStudentOdd(fillerRow.createCell(j));
+                    }
+                }
             }
         }
 
-        Row auditFailedCoursesRow = sheetAudit.createRow(rowNumAudit++);
-        auditFailedCoursesRow.createCell(0).setCellValue("Failed courses");
+        System.out.println("START UNMAPPED COURSES");
 
-        for (ReportTermCourse failedCourse : studentReport.getFailedCourses()) {
-            Row failedCourseRow = sheetAudit.createRow(rowNumAudit++);
-            failedCourseRow.createCell(3).setCellValue(failedCourse.getCredits());
-            failedCourseRow.createCell(4).setCellValue(failedCourse.getGradePoint());
-            failedCourseRow.createCell(5).setCellValue(failedCourse.getLetterGrade());
+        rowNum = failedCoursesBottomRowNum + 1;
+
+        Row auditUnmappedCoursesRow = sheet.createRow(rowNum);
+        setBackground(auditUnmappedCoursesRow.createCell(0), IndexedColors.GREY_25_PERCENT.getIndex());
+        setBackground(auditUnmappedCoursesRow.createCell(1), IndexedColors.GREY_25_PERCENT.getIndex());
+        int unmappedCoursesTopRowNum = rowNum;
+
+        int maxUnmappedCoursesCount = 1;
+        for (StudentReport studentReport : studentReports) {
+            maxUnmappedCoursesCount = Math.max(studentReport.getUnmappedCourses().size(), maxUnmappedCoursesCount);
+        }
+        int unmappedCoursesBottomRowNum = unmappedCoursesTopRowNum + maxUnmappedCoursesCount;
+
+        for (int i=0; i<studentsCount; i++) {
+            rowNum = unmappedCoursesTopRowNum;
+            Cell unmappedCoursesTitle = auditUnmappedCoursesRow.createCell(2 + 4*i);
+            unmappedCoursesTitle.setCellValue("Unmapped courses");
+            sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 2 + 4*i, 5 + 4*i));
+            setBackground(unmappedCoursesTitle, IndexedColors.GREY_25_PERCENT.getIndex());
+            rowNum++;
+
+            if (studentReports.get(i).getUnmappedCourses().isEmpty()) {
+                Row unmappedCourseRow = sheet.getRow(rowNum);
+                if (unmappedCourseRow == null) {
+                    unmappedCourseRow = sheet.createRow(rowNum);
+                }
+//                rowNum++;
+                setBackground(unmappedCourseRow.createCell(0), IndexedColors.GREY_25_PERCENT.getIndex());
+                setBackground(unmappedCourseRow.createCell(1), IndexedColors.GREY_25_PERCENT.getIndex());
+                unmappedCourseRow.createCell(2 + 4*i).setCellValue("None");
+                unmappedCourseRow.createCell(3 + 4*i);
+                unmappedCourseRow.createCell(4 + 4*i);
+                unmappedCourseRow.createCell(5 + 4*i);
+            }
+            else {
+                for (ReportTermCourse unmappedCourse : studentReports.get(i).getUnmappedCourses()) {
+                    Row unmappedCourseRow = sheet.getRow(rowNum);
+                    if (unmappedCourseRow == null) {
+                        unmappedCourseRow = sheet.createRow(rowNum);
+                    }
+                    rowNum++;
+                    setBackground(unmappedCourseRow.createCell(0), IndexedColors.GREY_25_PERCENT.getIndex());
+                    setBackground(unmappedCourseRow.createCell(1), IndexedColors.GREY_25_PERCENT.getIndex());
+                    unmappedCourseRow.createCell(2 + 4*i).setCellValue(unmappedCourse.getCode());
+                    unmappedCourseRow.createCell(3 + 4*i).setCellValue(unmappedCourse.getCredits());
+                    unmappedCourseRow.createCell(4 + 4*i).setCellValue(unmappedCourse.getGradePoint());
+                    unmappedCourseRow.createCell(5 + 4*i).setCellValue(unmappedCourse.getLetterGrade());
+
+                    for (int j=2 + 4*i; j<=5 + 4*i; j++) {
+                        setCenteredText(unmappedCourseRow.getCell(j));
+                        if (i % 2 == 0) {
+                            setBackgroundStudentEven(unmappedCourseRow.getCell(j));
+                        }
+                        else {
+                            setBackgroundStudentOdd(unmappedCourseRow.getCell(j));
+                        }
+                    }
+                }
+            }
+            for (; rowNum <= unmappedCoursesBottomRowNum; rowNum++) {
+                Row fillerRow = sheet.getRow(rowNum);
+                if (fillerRow == null) {
+                    fillerRow = sheet.createRow(rowNum);
+                }
+                for (int j=2 + 4*i; j<=5 + 4*i; j++) {
+                    if (i % 2 == 0) {
+                        setBackgroundStudentEven(fillerRow.createCell(j));
+                    }
+                    else {
+                        setBackgroundStudentOdd(fillerRow.createCell(j));
+                    }
+                }
+            }
         }
 
-        rowNumAudit++;
-        Row auditTotalRow = sheetAudit.createRow(rowNumAudit++);
-        auditTotalRow.createCell(0).setCellValue("TOTAL");
-        auditTotalRow.createCell(2).setCellValue(totalCurriculumCredits);
-        auditTotalRow.createCell(4).setCellValue(totalStudentTranscriptCredits);
+        System.out.println("START TOTAL CREDITS");
 
-        for (int i=0; i<=5; i++) {
-            sheetAudit.autoSizeColumn(i);
+        rowNum = unmappedCoursesBottomRowNum + 1;
+        Row auditTotalRow = sheet.createRow(rowNum);
+        auditTotalRow.createCell(0).setCellValue("TOTAL credits");
+        auditTotalRow.createCell(1).setCellValue(totalCurriculumCredits);
+        for (int i=0; i<studentsCount; i++) {
+            auditTotalRow.createCell(2 + 4*i);
+            auditTotalRow.createCell(3 + 4*i).setCellValue(students.get(i).getCreditsEarnedTotal());
+            auditTotalRow.createCell(4 + 4*i);
+            auditTotalRow.createCell(5 + 4*i);
         }
 
-        // ======================================================================================
+        System.out.println("START FINAL STYLING");
 
-        File spreadsheet = new File(
-                studentRecord.getName()
-                        + " transcript"
-                        + ".xlsx"
-        );
+        // LONG BORDERS
+        // curriculum courses
+        int lastColumnIdx = 1 + 4 * studentsCount;
 
-        FileOutputStream fileOutputStream = new FileOutputStream(spreadsheet);
+        RegionUtil.setBorderRight(BorderStyle.THICK, new CellRangeAddress(0, rowNum, 1, 1), sheet);
+        RegionUtil.setBorderBottom(BorderStyle.THICK, new CellRangeAddress(1, 1, 0, lastColumnIdx), sheet);
 
-        workbook.write(fileOutputStream);
-        workbook.close();
-        fileOutputStream.close();
+        // individual students
+        for (int i=0; i<studentsCount; i++) {
+            int columnIdx = 5 + 4*i;
+            RegionUtil.setBorderRight(BorderStyle.THIN, new CellRangeAddress(0, rowNum, columnIdx, columnIdx), sheet);
+        }
 
-        return spreadsheet;
+        System.out.println("START STYLING FAILED COURSES");
+        int failedCoursesRowIdx = auditFailedCoursesRow.getRowNum();
+        CellRangeAddress failedCoursesTopCRA = new CellRangeAddress(failedCoursesRowIdx, failedCoursesRowIdx, 0,lastColumnIdx);
+        CellRangeAddress failedCoursesBottomCRA = new CellRangeAddress(failedCoursesRowIdx, failedCoursesRowIdx, 2,lastColumnIdx);
+        System.out.println("START REGION UTIL");
+        RegionUtil.setBorderTop(BorderStyle.THICK, failedCoursesTopCRA, sheet);
+        RegionUtil.setBorderBottom(BorderStyle.THIN, failedCoursesBottomCRA, sheet);
+        System.out.println("DONE STYLING FAILED COURSES");
+
+        int unmappedCoursesRowIdx = auditUnmappedCoursesRow.getRowNum();
+        CellRangeAddress unmappedCoursesCRA = new CellRangeAddress(unmappedCoursesRowIdx, unmappedCoursesRowIdx, 2,lastColumnIdx);
+        RegionUtil.setBorderTop(BorderStyle.THICK, unmappedCoursesCRA, sheet);
+        RegionUtil.setBorderBottom(BorderStyle.THIN, unmappedCoursesCRA, sheet);
+
+        int totalCreditsRowIdx = auditTotalRow.getRowNum();
+        CellRangeAddress totalCreditsCRA = new CellRangeAddress(totalCreditsRowIdx, totalCreditsRowIdx, 0, lastColumnIdx);
+        RegionUtil.setBorderTop(BorderStyle.THICK, totalCreditsCRA, sheet);
+        RegionUtil.setBorderBottom(BorderStyle.THICK, totalCreditsCRA, sheet);
+        for (int i=0; i<2 + 4*studentsCount; i++) {
+            setBackground(auditTotalRow.getCell(i), IndexedColors.ROSE.getIndex());
+        }
+
+        // auto sizing and freezing headers
+        for (int i=0; i<2 + 4*studentsCount; i++) {
+            sheet.autoSizeColumn(i);
+        }
+        sheet.createFreezePane(2, 2);
+
+        System.out.println("DONE SHEET");
     }
+
+    private void setBoldFont(Cell cell) {
+        CellStyle cellStyle = cell.getSheet().getWorkbook().createCellStyle();
+        CellStyle oldCellStyle = cell.getCellStyle();
+        if(oldCellStyle == null) {
+            oldCellStyle = cell.getSheet().getWorkbook().createCellStyle();
+        }
+        else {
+            cellStyle.cloneStyleFrom(oldCellStyle);
+        }
+        Font bold = cell.getSheet().getWorkbook().createFont();
+        bold.setBold(true);
+        cellStyle.setFont(bold);
+
+        cell.setCellStyle(cellStyle);
+    }
+
+    private void setCenteredText(Cell cell) {
+        CellStyle cellStyle = cell.getSheet().getWorkbook().createCellStyle();
+        CellStyle oldCellStyle = cell.getCellStyle();
+        if(oldCellStyle == null) {
+            oldCellStyle = cell.getSheet().getWorkbook().createCellStyle();
+        }
+        else {
+            cellStyle.cloneStyleFrom(oldCellStyle);
+        }
+        cellStyle.setAlignment(HorizontalAlignment.CENTER);
+
+        cell.setCellStyle(cellStyle);
+    }
+
+    private void setBackgroundStudentEven(Cell cell) {
+        CellStyle cellStyle = cell.getSheet().getWorkbook().createCellStyle();
+        CellStyle oldCellStyle = cell.getCellStyle();
+        if(oldCellStyle == null) {
+            oldCellStyle = cell.getSheet().getWorkbook().createCellStyle();
+        }
+        else {
+            cellStyle.cloneStyleFrom(oldCellStyle);
+        }
+        cellStyle.setAlignment(HorizontalAlignment.CENTER);
+        cellStyle.setFillForegroundColor(IndexedColors.LIGHT_TURQUOISE.getIndex());
+        cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+        cell.setCellStyle(cellStyle);
+    }
+
+    private void setBackgroundStudentOdd(Cell cell) {
+        CellStyle cellStyle = cell.getSheet().getWorkbook().createCellStyle();
+        CellStyle oldCellStyle = cell.getCellStyle();
+        if(oldCellStyle == null) {
+            oldCellStyle = cell.getSheet().getWorkbook().createCellStyle();
+        }
+        else {
+            cellStyle.cloneStyleFrom(oldCellStyle);
+        }
+        cellStyle.setAlignment(HorizontalAlignment.CENTER);
+        cellStyle.setFillForegroundColor(IndexedColors.LIGHT_ORANGE.getIndex());
+        cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+        cell.setCellStyle(cellStyle);
+    }
+
+    private void setBackground(Cell cell, short colorIndex) {
+        CellStyle cellStyle = cell.getSheet().getWorkbook().createCellStyle();
+        CellStyle oldCellStyle = cell.getCellStyle();
+        if(oldCellStyle == null) {
+            oldCellStyle = cell.getSheet().getWorkbook().createCellStyle();
+        }
+        else {
+            cellStyle.cloneStyleFrom(oldCellStyle);
+        }
+        cellStyle.setAlignment(HorizontalAlignment.CENTER);
+        cellStyle.setFillForegroundColor(colorIndex);
+        cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+        cell.setCellStyle(cellStyle);
+    }
+
+//    private void setBorderRight(Cell cell, BorderStyle thickness) {
+//        CellStyle cellStyle = cell.getSheet().getWorkbook().createCellStyle();
+//        CellStyle oldCellStyle = cell.getCellStyle();
+//        if(oldCellStyle == null) {
+//            oldCellStyle = cell.getSheet().getWorkbook().createCellStyle();
+//        }
+//        else {
+//            cellStyle.cloneStyleFrom(oldCellStyle);
+//        }
+//        cellStyle.setBorderRight(thickness);
+//
+//        cell.setCellStyle(cellStyle);
+//    }
+
+//    private void setBorderRightThin(Cell cell) {
+//        CellStyle cellStyle = cell.getCellStyle();
+//        if(cellStyle == null) {
+//            cellStyle = workbook.createCellStyle();
+//        }
+//        cellStyle.setBorderRight(BorderStyle.THIN);
+//
+//        cell.setCellStyle(cellStyle);
+//    }
+
+//    private void setBorderBottom(Cell cell, BorderStyle thickness) {
+//        CellStyle cellStyle = cell.getSheet().getWorkbook().createCellStyle();
+//        CellStyle oldCellStyle = cell.getCellStyle();
+//        if(oldCellStyle == null) {
+//            oldCellStyle = cell.getSheet().getWorkbook().createCellStyle();
+//        }
+//        else {
+//            cellStyle.cloneStyleFrom(oldCellStyle);
+//        }
+//        cellStyle.setBorderBottom(thickness);
+//
+//        cell.setCellStyle(cellStyle);
+//    }
+
+
+//    private void s(Cell cell) {
+//        CellStyle cellStyle = cell.getCellStyle();
+//        if(cellStyle == null) {
+//            cellStyle = workbook.createCellStyle();
+//        }
+//
+//
+//        cell.setCellStyle(cellStyle);
+//    }
 
 }
