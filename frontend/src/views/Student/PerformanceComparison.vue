@@ -1,5 +1,19 @@
 <template>
   <v-container>
+    <v-row class="text-right">
+      <v-spacer></v-spacer>
+      <v-col cols="6" md="2">
+        <v-btn
+            color="success"
+            @click="downloadAudit( )"
+        >
+          Download
+          <v-icon>
+            mdi-download
+          </v-icon>
+        </v-btn>
+      </v-col>
+    </v-row>
     <v-expansion-panels v-model="panel" multiple>
       <v-expansion-panel>
         <v-expansion-panel-header>
@@ -80,7 +94,7 @@
 </template>
 
 <script>
-import {get, post} from "@/helpers/api";
+import {download, get, post} from "@/helpers/api";
 
 export default {
   name: "ProblemComparison",
@@ -192,7 +206,18 @@ export default {
           _this.data.series.push(student_series);
         }
       });
-    }
+    },
+    downloadAudit() {
+      let _this = this;
+
+      download(_this, '/report/batch/'+ _this.ids + '/export', '', response => {
+      }, error => {
+        _this.$store.dispatch('setSnackbar', {
+          text: error,
+          color: "error"
+        })
+      });
+    },
 
   },
 

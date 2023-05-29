@@ -555,7 +555,7 @@
 </template>
 
 <script>
-import {get, post, del} from '../../helpers/api'
+import {get, post, del, download} from '../../helpers/api'
 import _ from "lodash";
 // import debounce from 'lodash/debounce';
 
@@ -758,7 +758,15 @@ export default {
       }
     },
     downloadAudit() {
-      window.print()
+      let _this = this;
+
+      download(_this, '/report/'+ _this.$route.params.id + '/export', '', response => {
+      }, error => {
+        _this.$store.dispatch('setSnackbar', {
+          text: error,
+          color: "error"
+        })
+      });
     },
     removeAudit() {
       del(this, '/report/' + this.$route.params.id, '', () => {
