@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
@@ -52,7 +51,7 @@ public class ReportExportService {
     private File buildSpreadsheet(List<StudentRecord> students, Curriculum curriculum, List<StudentReport> studentReports, String filename) throws IOException {
         XSSFWorkbook workbook = new XSSFWorkbook();
 
-//        createStudentInformationSheet(students, workbook);
+        createStudentInformationSheet(workbook, students, studentReports);
         createAuditSheet(workbook, students, curriculum, studentReports);
 
         File spreadsheet = new File(filename);
@@ -66,45 +65,75 @@ public class ReportExportService {
         return spreadsheet;
     }
 
-    private void createStudentInformationSheet(StudentRecord studentRecord, XSSFWorkbook workbook) {
-        Sheet sheet = workbook.createSheet("student info");
-
-        ArrayList<Pair<String, String>> generalInformation = new ArrayList<Pair<String, String>>();
-        // Strings
-        generalInformation.add(Pair.of("Name", studentRecord.getName()));
-        generalInformation.add(Pair.of("schoolName", studentRecord.getSchoolName()));
-        generalInformation.add(Pair.of("Major", studentRecord.getMajor()));
-        generalInformation.add(Pair.of("Admission Semester", studentRecord.getAdmissionSemester()));
-        // Doubles
-        generalInformation.add(Pair.of("GPA", studentRecord.getGpa().toString()));
-        generalInformation.add(Pair.of("Grade Points Total", studentRecord.getGradePointsTotal().toString()));
-        // Integers
-        generalInformation.add(Pair.of("Credits Enrolled Total", studentRecord.getCreditsEnrolledTotal().toString()));
-        generalInformation.add(Pair.of("Credits Earned Total", studentRecord.getCreditsEarnedTotal().toString()));
-        generalInformation.add(Pair.of("credits Graded Total", studentRecord.getCreditsGradedTotal().toString()));
-        generalInformation.add(Pair.of("Current Semester", studentRecord.getCurrentSemester().toString()));
-
-        CellStyle cellStyleCentered = workbook.createCellStyle();
-        cellStyleCentered.setAlignment(HorizontalAlignment.CENTER);
-
+    private void createStudentInformationSheet(XSSFWorkbook workbook, List<StudentRecord> students, List<StudentReport> studentReports) {
+        Sheet sheet = workbook.createSheet("student information");
         int rowNum = 0;
-        for (Pair<String, String> row : generalInformation) {
-            Row sheetRow = sheet.createRow(rowNum++);
-            sheetRow.createCell(0).setCellValue(row.getFirst());
-            sheetRow.createCell(1).setCellValue(row.getSecond());
-//            System.out.println("inline... before:");
-//            System.out.println(sheetRow.getCell(0).getCellStyle());
-//            System.out.println(sheetRow.getCell(1).getCellStyle());
-            sheetRow.getCell(0).setCellStyle(cellStyleCentered);
-            sheetRow.getCell(1).setCellStyle(cellStyleCentered);
-//            System.out.println("after:");
-//            System.out.println(sheetRow.getCell(0).getCellStyle());
-//            System.out.println(sheetRow.getCell(1).getCellStyle());
-//            setCenteredText(sheetRow.getCell(0));
-//            setCenteredText(sheetRow.getCell(1));
+
+        List<String> rowNames = List.of(
+                "Name",
+//                "schoolName",
+                "ID#",
+                "Major",
+                "Admission Semester",
+                "Current Semester",
+                "cGPA",
+                "Grade Points Total",
+                "Credits Enrolled Total",
+                "Credits Earned Total",
+                "Credits Graded Total",
+                "Unmet degree requirements",
+                "Courses failed",
+                "Unmapped courses"
+                );
+
+        for (String rowName : rowNames) {
+            Cell cell = sheet.createRow(rowNum++).createCell(0);
+            cell.setCellValue(rowName);
+            setBorderRight(cell, BorderStyle.THICK);
+        }
+        setBorderBottom(sheet.getRow(rowNum-1).getCell(0), BorderStyle.THICK);
+
+        int studentIdx = 0;
+        for (StudentRecord student : students) {
+            int colIdx = studentIdx + 1;
+            rowNum = 0;
+            sheet.getRow(rowNum++).createCell(colIdx).setCellValue(student.getName());
+//            sheet.getRow(rowNum++).createCell(colIdx).setCellValue(student.getSchoolName());
+            sheet.getRow(rowNum++).createCell(colIdx).setCellValue(student.getId());
+            sheet.getRow(rowNum++).createCell(colIdx).setCellValue(student.getMajor());
+            sheet.getRow(rowNum++).createCell(colIdx).setCellValue(student.getAdmissionSemester());
+            sheet.getRow(rowNum++).createCell(colIdx).setCellValue(student.getCurrentSemester());
+            sheet.getRow(rowNum++).createCell(colIdx).setCellValue(student.getGpa());
+            sheet.getRow(rowNum++).createCell(colIdx).setCellValue(student.getGradePointsTotal());
+            sheet.getRow(rowNum++).createCell(colIdx).setCellValue(student.getCreditsEnrolledTotal());
+            sheet.getRow(rowNum++).createCell(colIdx).setCellValue(student.getCreditsEarnedTotal());
+            sheet.getRow(rowNum++).createCell(colIdx).setCellValue(student.getCreditsGradedTotal());
+            sheet.getRow(rowNum++).createCell(colIdx).setCellValue(studentReports.get(studentIdx).getUnmappedRequirements().size());
+            sheet.getRow(rowNum++).createCell(colIdx).setCellValue(studentReports.get(studentIdx).getFailedCourses().size());
+            sheet.getRow(rowNum).createCell(colIdx).setCellValue(studentReports.get(studentIdx).getUnmappedCourses().size());
+
+            setBoldFont(sheet.getRow(0).getCell(colIdx));
+            for (int i = 0; i <= rowNum; i++) {
+                Cell cell = sheet.getRow(i).getCell(colIdx);
+                setCenteredText(cell);
+                setBorderRight(cell, BorderStyle.THIN);
+                if (studentIdx % 2 == 0) setBackgroundStudentEven(cell);
+                else setBackgroundStudentOdd(cell);
+            }
+            setBorderBottom(sheet.getRow(rowNum).getCell(colIdx), BorderStyle.THICK);
+
+            studentIdx++;
         }
 
-        for (int i=0; i<=1; i++) {
+        rowNum += 2;
+        Row currentRow = sheet.createRow(rowNum);
+        Cell disclaimerCell = currentRow.createCell(0);
+        disclaimerCell.setCellValue("General student information - for audit go to next sheet");
+        sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 0, 3));
+        setBackground(disclaimerCell, IndexedColors.ROSE.getIndex());
+        setBoldFont(disclaimerCell);
+
+        for (int i=0; i<=studentIdx + 1; i++) {
             sheet.autoSizeColumn(i);
         }
     }
@@ -496,43 +525,33 @@ public class ReportExportService {
         cell.setCellStyle(cellStyle);
     }
 
-//    private void setBorderRight(Cell cell, BorderStyle thickness) {
-//        CellStyle cellStyle = cell.getSheet().getWorkbook().createCellStyle();
-//        CellStyle oldCellStyle = cell.getCellStyle();
-//        if(oldCellStyle == null) {
-//            oldCellStyle = cell.getSheet().getWorkbook().createCellStyle();
-//        }
-//        else {
-//            cellStyle.cloneStyleFrom(oldCellStyle);
-//        }
-//        cellStyle.setBorderRight(thickness);
-//
-//        cell.setCellStyle(cellStyle);
-//    }
+    private void setBorderRight(Cell cell, BorderStyle thickness) {
+        CellStyle cellStyle = cell.getSheet().getWorkbook().createCellStyle();
+        CellStyle oldCellStyle = cell.getCellStyle();
+        if(oldCellStyle == null) {
+            oldCellStyle = cell.getSheet().getWorkbook().createCellStyle();
+        }
+        else {
+            cellStyle.cloneStyleFrom(oldCellStyle);
+        }
+        cellStyle.setBorderRight(thickness);
 
-//    private void setBorderRightThin(Cell cell) {
-//        CellStyle cellStyle = cell.getCellStyle();
-//        if(cellStyle == null) {
-//            cellStyle = workbook.createCellStyle();
-//        }
-//        cellStyle.setBorderRight(BorderStyle.THIN);
-//
-//        cell.setCellStyle(cellStyle);
-//    }
+        cell.setCellStyle(cellStyle);
+    }
 
-//    private void setBorderBottom(Cell cell, BorderStyle thickness) {
-//        CellStyle cellStyle = cell.getSheet().getWorkbook().createCellStyle();
-//        CellStyle oldCellStyle = cell.getCellStyle();
-//        if(oldCellStyle == null) {
-//            oldCellStyle = cell.getSheet().getWorkbook().createCellStyle();
-//        }
-//        else {
-//            cellStyle.cloneStyleFrom(oldCellStyle);
-//        }
-//        cellStyle.setBorderBottom(thickness);
-//
-//        cell.setCellStyle(cellStyle);
-//    }
+    private void setBorderBottom(Cell cell, BorderStyle thickness) {
+        CellStyle cellStyle = cell.getSheet().getWorkbook().createCellStyle();
+        CellStyle oldCellStyle = cell.getCellStyle();
+        if(oldCellStyle == null) {
+            oldCellStyle = cell.getSheet().getWorkbook().createCellStyle();
+        }
+        else {
+            cellStyle.cloneStyleFrom(oldCellStyle);
+        }
+        cellStyle.setBorderBottom(thickness);
+
+        cell.setCellStyle(cellStyle);
+    }
 
 
 //    private void s(Cell cell) {
