@@ -1,13 +1,26 @@
-package com.example.auditor.model;
+package com.example.auditor.domain.user;
 
-import org.springframework.boot.jackson.JsonComponent;
+import javax.persistence.*;
 
-@JsonComponent
-public class LoginRequest {
+@Table(name = "users")
+@Entity
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     private String username;
 
     private String password;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public String getUsername() {
         return username;
@@ -25,3 +38,4 @@ public class LoginRequest {
         this.password = password;
     }
 }
+
