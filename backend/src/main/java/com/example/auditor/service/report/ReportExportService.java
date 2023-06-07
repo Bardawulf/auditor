@@ -27,13 +27,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ReportExportService {
 
-    @Value("${audit.parser.type-prefix}")
-    private String requirementTypePrefix;
-
-    @Value("${audit.parser.requirements-row-terminator}")
-    private String requirementsRowTerminator;
-
-
     public File buildSpreadsheetSingle(StudentRecord studentRecord, Curriculum curriculum, StudentReport studentReport) throws IOException {
         String filename = "audit " + studentRecord.getName() + " " + curriculum.getMajor() + ".xlsx";
         List<StudentRecord> students = List.of(studentRecord);
