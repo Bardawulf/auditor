@@ -1,16 +1,9 @@
 <template>
-  <v-container
-      id="dashboard"
-      fluid
-      tag="section"
-  >
+  <v-container id="dashboard" fluid tag="section">
     <v-row class="text-right">
       <v-spacer></v-spacer>
       <v-col cols="6" md="2">
-        <v-btn
-            color="success"
-            @click="downloadAudit( )"
-        >
+        <v-btn color="success" @click="downloadAudit()">
           Download
           <v-icon>
             mdi-download
@@ -18,10 +11,7 @@
         </v-btn>
       </v-col>
       <v-col cols="6" md="2">
-        <v-btn
-            color="success"
-            @click="showUploadFileDialog=true"
-        >
+        <v-btn color="success" @click="showUploadFileDialog = true">
           Update transcript
           <v-icon>
             mdi-account-reactivate
@@ -30,15 +20,8 @@
       </v-col>
     </v-row>
     <v-row>
-      <v-col
-          cols="12"
-          sm="6"
-      >
-        <base-material-card
-            color="info"
-            icon="mdi-account-details"
-            title="Student information"
-        >
+      <v-col cols="12" sm="6">
+        <base-material-card color="info" icon="mdi-account-details" title="Student information">
           <v-card-text>
             <div class="display-2 font-weight-light">
               {{ student.name }}
@@ -58,31 +41,23 @@
           </v-card-text>
         </base-material-card>
       </v-col>
-      <v-col
-          cols="12"
-          sm="6"
-      >
-        <base-material-card
-            color="info"
-            class="px-5 py-3"
-            icon="mdi-book-education"
-            title="Academic standing"
-        >
+      <v-col cols="12" sm="6">
+        <base-material-card color="info" class="px-5 py-3" icon="mdi-book-education" title="Academic standing">
           <v-card-text>
             <v-simple-table dense>
               <tbody>
-              <tr>
-                <td>Cumulative GPA</td>
-                <td>{{ student.gpa }}</td>
-              </tr>
-              <tr>
-                <td>Credits Enrolled</td>
-                <td>{{ student.creditsEnrolledTotal }}</td>
-              </tr>
-              <tr>
-                <td>Credits Earned</td>
-                <td>{{ student.creditsEarnedTotal }}</td>
-              </tr>
+                <tr>
+                  <td>Cumulative GPA</td>
+                  <td>{{ student.gpa }}</td>
+                </tr>
+                <tr>
+                  <td>Credits Enrolled</td>
+                  <td>{{ student.creditsEnrolledTotal }}</td>
+                </tr>
+                <tr>
+                  <td>Credits Earned</td>
+                  <td>{{ student.creditsEarnedTotal }}</td>
+                </tr>
               </tbody>
             </v-simple-table>
           </v-card-text>
@@ -90,16 +65,9 @@
       </v-col>
     </v-row>
     <v-row>
-      <v-col
-          cols="12"
-      >
-        <base-material-chart-card
-            :data="semesterGPAchart.data"
-            :options="semesterGPAchart.options"
-            color="success"
-            hover-reveal
-            type="Line"
-        >
+      <v-col cols="12">
+        <base-material-chart-card :data="semesterGPAchart.data" :options="semesterGPAchart.options" color="success"
+          hover-reveal type="Line">
 
           <h4 class="card-title font-weight-light mt-2 ml-2">
             Average GPA over terms
@@ -112,15 +80,8 @@
       </v-col>
     </v-row>
     <v-row>
-      <v-select v-model="selectedCurriculum"
-                :items="curriculums"
-                item-value="id"
-                prepend-icon="mdi-format-align-justify"
-                menu-props="auto"
-                hide-details
-                label="Select a curriculum to build a report"
-                single-line
-      >
+      <v-select v-model="selectedCurriculum" :items="curriculums" item-value="id" prepend-icon="mdi-format-align-justify"
+        menu-props="auto" hide-details label="Select a curriculum to build a report" single-line>
         <template slot="selection" slot-scope="data">
           {{ data.item.major }} {{ data.item.year }}
         </template>
@@ -128,87 +89,71 @@
           {{ data.item.major }} {{ data.item.year }}
         </template>
       </v-select>
-      <v-btn
-          color="success"
-          @click="buildReport()">
+      <v-btn color="success" @click="buildReport()">
         Create
       </v-btn>
     </v-row>
 
-<!--Provide a reminder tool that will, depending on the term of the student, display which classes should the student take to be on time.-->
+    <!--Provide a reminder tool that will, depending on the term of the student, display which classes should the student take to be on time.-->
     <v-row>
-      <v-col
-          cols="12"
-          md="6"
-      >
-        <base-material-card
-            v-if="tableInfo.unmappedRequirements && tableInfo.unmappedRequirements.length > 0"
-            icon="mdi-bell-plus"
-            :title="'Should take in ' + currentSemesterString"
-            class="px-5 py-3"
-        >
+      <v-col cols="12" md="6">
+        <base-material-card v-if="tableInfo.unmappedRequirements && tableInfo.unmappedRequirements.length > 0"
+          icon="mdi-bell-plus" :title="'Should take in ' + currentSemesterString" class="px-5 py-3">
           <v-simple-table>
             <thead>
-            <tr>
-              <th></th>
-              <th class="primary--text display-1">Course Name</th>
-              <th class="primary--text display-1">Credits</th>
-              <th class="primary--text display-1">Semester</th>
-            </tr>
+              <tr>
+                <th></th>
+                <th class="primary--text display-1">Course Name</th>
+                <th class="primary--text display-1">Credits</th>
+                <th class="primary--text display-1">Semester</th>
+              </tr>
             </thead>
             <tbody>
-            <template v-for="req in tableInfo.unmappedRequirements">
-            <!--            <template v-for="req in orderedUnmappedReq">-->
-<!--            <template v-for="req in currentSemesterReq">-->
-<!--                :key="req.id"-->
-<!--                @click.stop="allRowCheckbox(unmappedReq, req)">-->
-<!--              <td><input type="checkbox" :value=req v-model="unmappedReq"-->
-<!--                         :disabled="mappingReqDisabled"/></td>-->
-<!--              <tr :key="req.id">-->
-              <tr v-if="req.semester == student.currentSemester" :key="req.id">
-                <td></td>
-                <td>
-                  {{ req.name }}
-                </td>
-                <td>
-                  {{ req.credit }}
-                </td>
-                <td>
-                  {{ req.semester }}
-                </td>
-              </tr>
-            </template>
+              <template v-for="req in tableInfo.unmappedRequirements">
+                <!--            <template v-for="req in orderedUnmappedReq">-->
+                <!--            <template v-for="req in currentSemesterReq">-->
+                <!--                :key="req.id"-->
+                <!--                @click.stop="allRowCheckbox(unmappedReq, req)">-->
+                <!--              <td><input type="checkbox" :value=req v-model="unmappedReq"-->
+                <!--                         :disabled="mappingReqDisabled"/></td>-->
+                <!--              <tr :key="req.id">-->
+                <tr v-if="req.semester == student.currentSemester" :key="req.id">
+                  <td></td>
+                  <td>
+                    {{ req.name }}
+                  </td>
+                  <td>
+                    {{ req.credit }}
+                  </td>
+                  <td>
+                    {{ req.semester }}
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </v-simple-table>
         </base-material-card>
       </v-col>
-      <v-col
-          cols="12"
-          md="6"
-      >
-        <base-material-card
-            v-if="tableInfo.unmappedRequirements && tableInfo.unmappedRequirements.length > 0"
-            icon="mdi-bell-alert"
-            color="red"
-            :title="'Should have already taken before ' + currentSemesterString"
-            class="px-5 py-3"
-        >
+      <v-col cols="12" md="6">
+        <base-material-card v-if="tableInfo.unmappedRequirements && tableInfo.unmappedRequirements.length > 0"
+          icon="mdi-bell-alert" color="red" :title="'Should have already taken before ' + currentSemesterString"
+          class="px-5 py-3">
           <v-simple-table>
             <thead>
-            <tr>
-              <th></th>
-              <th class="primary--text display-1">Course Name</th>
-              <th class="primary--text display-1">Credits</th>
-              <th class="primary--text display-1">Semester</th>
-            </tr>
+              <tr>
+                <th></th>
+                <th class="primary--text display-1">Course Name</th>
+                <th class="primary--text display-1">Credits</th>
+                <th class="primary--text display-1">Semester</th>
+              </tr>
             </thead>
             <tbody>
-<!--            <template v-for="req in orderedUnmappedReq">-->
+              <!--            <template v-for="req in orderedUnmappedReq">-->
               <template v-for="req in tableInfo.unmappedRequirements">
-<!--                  :key="req.id"-->
-<!--                  @click.stop="allRowCheckbox(unmappedReq, req)">-->
-  <!--              <td><input type="checkbox" :value=req v-model="unmappedReq"-->
-  <!--                         :disabled="mappingReqDisabled"/></td>-->
+                <!--                  :key="req.id"-->
+                <!--                  @click.stop="allRowCheckbox(unmappedReq, req)">-->
+                <!--              <td><input type="checkbox" :value=req v-model="unmappedReq"-->
+                <!--                         :disabled="mappingReqDisabled"/></td>-->
                 <tr v-if="req.semester < student.currentSemester" :key="req.id">
                   <td></td>
                   <td>
@@ -228,155 +173,130 @@
       </v-col>
     </v-row>
 
-    <base-material-card
-        v-if="tableInfo.completeRequirements && tableInfo.completeRequirements.length > 0"
-        icon="mdi-text-box-check"
-        title="Audit"
-        class="px-5 py-3"
-    >
+    <base-material-card v-if="tableInfo.completeRequirements && tableInfo.completeRequirements.length > 0"
+      icon="mdi-text-box-check" title="Audit" class="px-5 py-3">
       <v-simple-table>
         <thead>
-        <tr>
-          <th><input class="mr-3" type="checkbox" @click="selectAll" v-model="allSelected"
-                     :disabled="unmappingDisabled"/></th>
-          <th class="primary--text display-1">Required Course</th>
-          <th class="primary--text display-1">Credits</th>
-          <th class="primary--text display-1">Taken</th>
-          <th class="primary--text display-1">Credits</th>
-          <th class="primary--text display-1">Grade Points</th>
-          <th class="primary--text display-1">Letter Grade</th>
-<!--          <th class="primary&#45;&#45;text display-1">Semester</th>-->
-        </tr>
+          <tr>
+            <th><input class="mr-3" type="checkbox" @click="selectAll" v-model="allSelected"
+                :disabled="unmappingDisabled" /></th>
+            <th class="primary--text display-1">Required Course</th>
+            <th class="primary--text display-1">Credits</th>
+            <th class="primary--text display-1">Taken</th>
+            <th class="primary--text display-1">Credits</th>
+            <th class="primary--text display-1">Grade Points</th>
+            <th class="primary--text display-1">Letter Grade</th>
+            <!--          <th class="primary&#45;&#45;text display-1">Semester</th>-->
+          </tr>
         </thead>
 
         <tbody>
-        <tr v-for="course in tableInfo.completeRequirements"
-            :key="course.id"
+          <tr v-for="course in tableInfo.completeRequirements" :key="course.id"
             @click.stop="allRowCheckbox(map2unmap, course.requirement.id)">
-          <td><input type="checkbox" :value=course.requirement.id v-model="map2unmap"
-                     :disabled="unmappingDisabled"/></td>
-          <td>
-            {{ course.requirement.name }}
-          </td>
-          <td>
-            {{ course.requirement.credit }}
-          </td>
-          <td>
-            <div v-if="course.course.code === course.requirement.patterns">
-              <v-icon
-                  color="success"
-                  class="mx-1">
-                mdi-checkbox-marked-circle-outline
-              </v-icon>
-            </div>
-            <div v-else-if="course.course.code">
-              {{ course.course.code }}
-            </div>
-          </td>
-          <td>
-            {{ course.course.credits }}
-          </td>
-          <td>
-            {{ course.course.gradePoint }}
-          </td>
-          <td>
-            {{ course.course.letterGrade }}
-          </td>
-<!--          <td>-->
-<!--            {{ course.requirement.semester }}-->
-<!--          </td>-->
-        </tr>
-<!--        <tr>-->
-<!--          <td></td>-->
-<!--          <td class="font-weight-bold">Total Credits</td>-->
-<!--          <td class="font-weight-bold">{{totalCredits}}</td>-->
-<!--        </tr>-->
+            <td><input type="checkbox" :value=course.requirement.id v-model="map2unmap" :disabled="unmappingDisabled" />
+            </td>
+            <td>
+              {{ course.requirement.name }}
+            </td>
+            <td>
+              {{ course.requirement.credit }}
+            </td>
+            <td>
+              <div v-if="course.course.code === course.requirement.patterns">
+                <v-icon color="success" class="mx-1">
+                  mdi-checkbox-marked-circle-outline
+                </v-icon>
+              </div>
+              <div v-else-if="course.course.code">
+                {{ course.course.code }}
+              </div>
+            </td>
+            <td>
+              {{ course.course.credits }}
+            </td>
+            <td>
+              {{ course.course.gradePoint }}
+            </td>
+            <td>
+              {{ course.course.letterGrade }}
+            </td>
+            <!--          <td>-->
+            <!--            {{ course.requirement.semester }}-->
+            <!--          </td>-->
+          </tr>
+          <!--        <tr>-->
+          <!--          <td></td>-->
+          <!--          <td class="font-weight-bold">Total Credits</td>-->
+          <!--          <td class="font-weight-bold">{{totalCredits}}</td>-->
+          <!--        </tr>-->
         </tbody>
       </v-simple-table>
     </base-material-card>
     <v-row>
-      <v-col
-          cols="12"
-          md="6"
-      >
-        <base-material-card
-            v-if="tableInfo.unmappedRequirements && tableInfo.unmappedRequirements.length > 0"
-            icon="mdi-text-box-remove"
-            title="Unmapped requirements"
-            class="px-5 py-3"
-        >
+      <v-col cols="12" md="6">
+        <base-material-card v-if="tableInfo.unmappedRequirements && tableInfo.unmappedRequirements.length > 0"
+          icon="mdi-text-box-remove" title="Unmapped requirements" class="px-5 py-3">
           <v-simple-table>
             <thead>
-            <tr>
-              <th></th>
-              <th class="primary--text display-1">Required Course</th>
-              <th class="primary--text display-1">Credits</th>
-              <th class="primary--text display-1">Semester</th>
-            </tr>
+              <tr>
+                <th></th>
+                <th class="primary--text display-1">Required Course</th>
+                <th class="primary--text display-1">Credits</th>
+                <th class="primary--text display-1">Semester</th>
+              </tr>
             </thead>
 
             <tbody>
-<!--            <tr v-for="req in orderedUnmappedReq"-->
-            <tr v-for="req in tableInfo.unmappedRequirements"
-                :key="req.id"
+              <!--            <tr v-for="req in orderedUnmappedReq"-->
+              <tr v-for="req in tableInfo.unmappedRequirements" :key="req.id"
                 @click.stop="allRowCheckbox(unmappedReq, req)">
-              <td><input type="checkbox" :value=req v-model="unmappedReq"
-                         :disabled="mappingReqDisabled"/></td>
-              <td>
-                {{ req.name }}
-              </td>
-              <td>
-                {{ req.credit }}
-              </td>
-              <td>
-                {{ req.semester }}
-              </td>
-            </tr>
+                <td><input type="checkbox" :value=req v-model="unmappedReq" :disabled="mappingReqDisabled" /></td>
+                <td>
+                  {{ req.name }}
+                </td>
+                <td>
+                  {{ req.credit }}
+                </td>
+                <td>
+                  {{ req.semester }}
+                </td>
+              </tr>
             </tbody>
           </v-simple-table>
         </base-material-card>
       </v-col>
-      <v-col
-          cols="12"
-          md="6"
-      >
-        <base-material-card
-            v-if="tableInfo.unmappedCourses && tableInfo.unmappedCourses.length > 0"
-            icon="mdi-text-box-plus"
-            title="Unmapped courses"
-            class="px-5 py-3"
-        >
+      <v-col cols="12" md="6">
+        <base-material-card v-if="tableInfo.unmappedCourses && tableInfo.unmappedCourses.length > 0"
+          icon="mdi-text-box-plus" title="Unmapped courses" class="px-5 py-3">
           <v-simple-table>
             <thead>
-            <tr>
-              <th></th>
-              <th class="primary--text display-1">Taken Course</th>
-              <th class="primary--text display-1">Credits</th>
-              <th class="primary--text display-1">Grade Pts</th>
-              <th class="primary--text display-1">Letter Grade</th>
-            </tr>
+              <tr>
+                <th></th>
+                <th class="primary--text display-1">Taken Course</th>
+                <th class="primary--text display-1">Credits</th>
+                <th class="primary--text display-1">Grade Pts</th>
+                <th class="primary--text display-1">Letter Grade</th>
+              </tr>
             </thead>
 
             <tbody>
-            <tr v-for="course in tableInfo.unmappedCourses"
-                :key="course"
+              <tr v-for="course in tableInfo.unmappedCourses" :key="course"
                 @click.stop="allRowCheckbox(unmappedCourse, course)">
-              <td><input type="checkbox" :value=course v-model="unmappedCourse"
-                         :disabled="mappingCourseDisabled"/>
-              </td>
-              <td>
-                {{ course.code }}
-              </td>
-              <td>
-                {{ course.credits }}
-              </td>
-              <td>
-                {{ course.gradePoint }}
-              </td>
-              <td>
-                {{ course.letterGrade }}
-              </td>
-            </tr>
+                <td><input type="checkbox" :value=course v-model="unmappedCourse" :disabled="mappingCourseDisabled" />
+                </td>
+                <td>
+                  {{ course.code }}
+                </td>
+                <td>
+                  {{ course.credits }}
+                </td>
+                <td>
+                  {{ course.gradePoint }}
+                </td>
+                <td>
+                  {{ course.letterGrade }}
+                </td>
+              </tr>
             </tbody>
           </v-simple-table>
         </base-material-card>
@@ -384,16 +304,9 @@
     </v-row>
 
     <v-row>
-      <v-col
-        cols="12"
-        md="6"
-      >
-        <base-material-card
-            v-if="tableInfo.failedCourses && tableInfo.failedCourses.length > 0"
-            icon="mdi-text-box-plus"
-            title="Failed courses"
-            class="px-5 py-3"
-        >
+      <v-col cols="12" md="6">
+        <base-material-card v-if="tableInfo.failedCourses && tableInfo.failedCourses.length > 0" icon="mdi-text-box-plus"
+          title="Failed courses" class="px-5 py-3">
           <v-simple-table>
             <thead>
               <tr>
@@ -404,9 +317,8 @@
             </thead>
 
             <tbody>
-              <tr v-for="course in tableInfo.failedCourses"
-                  :key="course"
-                  @click.stop="allRowCheckbox(unmappedCourse, course)">
+              <tr v-for="course in tableInfo.failedCourses" :key="course"
+                @click.stop="allRowCheckbox(unmappedCourse, course)">
                 <td>
                   {{ course.code }}
                 </td>
@@ -427,11 +339,8 @@
     <v-row class="text-right">
       <v-spacer></v-spacer>
       <v-col cols="3" md="2">
-        <v-btn
-            v-if="map2unmap.length > 0 || (unmappedCourse.length !== 0 && unmappedReq.length !== 0)"
-            color="error"
-            @click="dialog = true"
-        >
+        <v-btn v-if="map2unmap.length > 0 || (unmappedCourse.length !== 0 && unmappedReq.length !== 0)" color="error"
+          @click="dialog = true">
           Map/Unmap
           <v-icon>
             mdi-link
@@ -439,11 +348,7 @@
         </v-btn>
       </v-col>
       <v-col cols="3" md="2">
-        <v-btn
-            v-if="tableInfo !== ''"
-            color="error"
-            @click="del=true, dialog = true"
-        >
+        <v-btn v-if="tableInfo !== ''" color="error" @click="del = true, dialog = true">
           Clear
           <v-icon>
             mdi-delete
@@ -452,34 +357,20 @@
       </v-col>
     </v-row>
 
-    <v-dialog
-        v-model="showUploadFileDialog"
-        max-width="600px"
-    >
+    <v-dialog v-model="showUploadFileDialog" max-width="600px">
       <v-card>
         <v-card-title class="primary--text display-2">
           Add transcripts
           <v-spacer />
 
-          <v-icon
-              aria-label="Close"
-              @click="showUploadFileDialog=false"
-          >
+          <v-icon aria-label="Close" @click="showUploadFileDialog = false">
             mdi-close
           </v-icon>
         </v-card-title>
 
         <v-card-text>
-          <v-file-input
-              v-model="files"
-              multiple
-              show-size
-              counter
-              placeholder="Select transcripts"
-              prepend-icon="mdi-paperclip"
-              outlined
-              accept=".pdf"
-          >
+          <v-file-input v-model="files" multiple show-size counter placeholder="Select transcripts"
+            prepend-icon="mdi-paperclip" outlined accept=".pdf">
           </v-file-input>
         </v-card-text>
 
@@ -487,18 +378,10 @@
 
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn
-              color="primary"
-              text
-              @click="submitFiles()"
-          >
+          <v-btn color="primary" text @click="submitFiles()">
             Ok
           </v-btn>
-          <v-btn
-              color="primary"
-              text
-              @click="showUploadFileDialog=false, files = []"
-          >
+          <v-btn color="primary" text @click="showUploadFileDialog = false, files = []">
             Close
           </v-btn>
         </v-card-actions>
@@ -507,45 +390,35 @@
     </v-dialog>
 
 
-    <v-dialog
-        v-model="dialog"
-        max-width="600"
-    >
+    <v-dialog v-model="dialog" max-width="600">
       <v-card>
         <v-card-title class="warning--text display-2">
           Warning!
 
-          <v-spacer/>
+          <v-spacer />
 
-          <v-icon
-              aria-label="Close"
-              @click="dialog = false, del = false"
-          >
+          <v-icon aria-label="Close" @click="dialog = false, del = false">
             mdi-close
           </v-icon>
         </v-card-title>
 
         <v-card-text class="text-center">
           {{
-            del ? 'Are you sure you want to delete?' : (map2unmap.length > 0 ? 'Are you sure you want to unmap the selected row(s)?' : (unmappedReq.length !== 0 && unmappedCourse.length !== 0 ? 'Are you sure you want to map the selected courses to the selected requirements?' : 'Nothing selected or incorrect selection!'))
+            del ? 'Are you sure you want to delete?' : (map2unmap.length > 0 ? 'Are you sure you want to unmap the selected
+                    row(s) ? ' : (unmappedReq.length !== 0 && unmappedCourse.length !== 0 ? 'Are you sure you want to map the
+          selected
+                    courses to the selected requirements ? ' : 'Nothing selected or incorrect selection!'))
           }}
         </v-card-text>
 
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn
-              color="warning"
-              text
-              @click="dialog = false, del = false, map2unmap = [], unmappedCourse = [], unmappedReq = []"
-          >
+          <v-btn color="warning" text
+            @click="dialog = false, del = false, map2unmap = [], unmappedCourse = [], unmappedReq = []">
             Cancel
           </v-btn>
 
-          <v-btn
-              color="warning"
-              text
-              @click="del === true ? removeAudit() : mapUnmap(), dialog=false, del=false"
-          >
+          <v-btn color="warning" text @click="del === true ? removeAudit() : mapUnmap(), dialog = false, del = false">
             Yes
           </v-btn>
         </v-card-actions>
@@ -555,7 +428,7 @@
 </template>
 
 <script>
-import {get, post, del, download} from '../../helpers/api'
+import { get, post, del, download } from '../../helpers/api'
 import _ from "lodash";
 // import debounce from 'lodash/debounce';
 
@@ -570,6 +443,7 @@ export default {
       student: {},
       semesterGPAchart: {},
       tableInfo: '',
+      selectedCurriculum: null,
       curriculums: [],
       selectedCurriculum: "",
       map2unmap: [],
@@ -586,7 +460,7 @@ export default {
     }
   },
   computed: {
-    currentSemesterString: function() {
+    currentSemesterString: function () {
       var s = this.student;
       var admSem = s.admissionSemester;
       var curSem = s.currentSemester;
@@ -600,7 +474,7 @@ export default {
     //     // return true;
     //   })
     // },
-    orderedUnmappedReq: function() {
+    orderedUnmappedReq: function () {
       return _.orderBy(this.unmappedReq, 'semester')
       // return _.sortBy(this.unmappedReq, 'semester')
     }
@@ -621,12 +495,15 @@ export default {
       this.mappingCourseDisabled = this.unmappedCourse.length > this.unmappedReq.length + 1;
       this.mappingReqDisabled = this.unmappedCourse.length + 1 < this.unmappedReq.length;
     },
+    selectedCurriculum() {
+      this.updateSelectedCurriculum();
+    },
   },
 
   methods: {
     submitFiles() {
-      if ( this.files.length != 0 ) {
-        for(var i = 0; i < this.files.length; i ++ ) {
+      if (this.files.length != 0) {
+        for (var i = 0; i < this.files.length; i++) {
           let formData = new FormData();
           formData.append('file', this.files[i]);
 
@@ -634,7 +511,7 @@ export default {
             this.$store.dispatch('setSnackbar', {
               text: "Transcript uploaded",
             })
-          }, error =>{
+          }, error => {
             this.$store.dispatch('setSnackbar', {
               text: error.response ? error.response.data.message : error,
               color: "error"
@@ -699,10 +576,14 @@ export default {
 
       post(this, '/report', data, response => {
         this.tableInfo = response.data;
-        this.$store.dispatch('setSnackbar', {text: "Success"})
+        this.$store.dispatch('setSnackbar', { text: "Success" })
       }, error => {
-        this.$store.dispatch('setSnackbar', {text: error, color: "error"});
+        this.$store.dispatch('setSnackbar', { text: error, color: "error" });
       });
+    },
+    updateSelectedCurriculum() {
+      // Store the selected curriculum in localStorage
+      localStorage.setItem('selectedCurriculum', JSON.stringify(this.selectedCurriculum));
     },
     selectAll() {
       this.map2unmap = []
@@ -727,20 +608,20 @@ export default {
         let query = `requirementIds=${this.unmappedReq.map(x => x.id).toString()}&courseIds=${this.unmappedCourse.map(x => x.id).toString()}`;
         console.log(query)
         post(this, '/report/' + this.student.id + '/mapRequirement?' + query, '',
-            () => {
-              this.getReport();
-              this.$store.dispatch('setSnackbar', {text: "Success"});
-            }, error => {
-              this.$store.dispatch('setSnackbar', {text: error, color: "error"});
-            });
+          () => {
+            this.getReport();
+            this.$store.dispatch('setSnackbar', { text: "Success" });
+          }, error => {
+            this.$store.dispatch('setSnackbar', { text: error, color: "error" });
+          });
       } else {
         post(this, `/report/${this.student.id}/detachRequirements?requirementIds=${this.map2unmap.toString()}`,
-            '', () => {
-              this.getReport();
-              this.$store.dispatch('setSnackbar', {text: "Success"});
-            }, error => {
-              this.$store.dispatch('setSnackbar', {text: error, color: "error"});
-            })
+          '', () => {
+            this.getReport();
+            this.$store.dispatch('setSnackbar', { text: "Success" });
+          }, error => {
+            this.$store.dispatch('setSnackbar', { text: error, color: "error" });
+          })
       }
       this.unmappedReq = [];
       this.unmappedCourse = [];
@@ -748,8 +629,8 @@ export default {
     },
     allRowCheckbox(arr, obj) {
       if ((arr === this.map2unmap && !this.unmappingDisabled) ||
-          (arr === this.unmappedCourse && !this.mappingCourseDisabled) ||
-          (arr === this.unmappedReq && !this.mappingReqDisabled)) {
+        (arr === this.unmappedCourse && !this.mappingCourseDisabled) ||
+        (arr === this.unmappedReq && !this.mappingReqDisabled)) {
         if (arr.includes(obj)) {
           arr = arr.splice(arr.indexOf(obj), 1);
         } else {
@@ -760,7 +641,7 @@ export default {
     downloadAudit() {
       let _this = this;
 
-      download(_this, '/report/'+ _this.$route.params.id + '/export', '', response => {
+      download(_this, '/report/' + _this.$route.params.id + '/export', '', response => {
       }, error => {
         _this.$store.dispatch('setSnackbar', {
           text: error,
@@ -771,9 +652,9 @@ export default {
     removeAudit() {
       del(this, '/report/' + this.$route.params.id, '', () => {
         this.tableInfo = '';
-        this.$store.dispatch('setSnackbar', {text: "Success"});
+        this.$store.dispatch('setSnackbar', { text: "Success" });
       }, error => {
-        this.$store.dispatch('setSnackbar', {text: error, color: "error"});
+        this.$store.dispatch('setSnackbar', { text: error, color: "error" });
       });
     }
   },
@@ -784,5 +665,16 @@ export default {
     this.getSemesterChart()
     this.getReport()
   },
+
+
+  mounted() {
+    // Retrieve the selected curriculum from localStorage
+    const storedSelectedCurriculum = localStorage.getItem('selectedCurriculum');
+    if (storedSelectedCurriculum) {
+      this.selectedCurriculum = JSON.parse(storedSelectedCurriculum);
+    }
+  },
+
 }
+
 </script>
