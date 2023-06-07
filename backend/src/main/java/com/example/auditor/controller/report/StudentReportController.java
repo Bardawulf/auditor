@@ -61,6 +61,10 @@ public class StudentReportController {
 
         StudentReport studentReport = reportService.getById(id);
 
+        Long curriculumId = studentReport.getCurriculumId();
+        if (curriculumId == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Student does not have curriculum linked");
+        }
         Curriculum curriculum = curriculumService.getCurriculum(studentReport.getCurriculumId());
 
         File spreadsheet = reportExportService.buildSpreadsheetSingle(optionalStudent.get(), curriculum, studentReport);
@@ -137,9 +141,6 @@ public class StudentReportController {
         }
 
         List<StudentReport> studentReports = reportService.getByIds(ids);
-//        if (studentReports.size() < students.size()) {
-//            throw new ResponseStatusException(HttpStatus.CONFLICT, "Not all students have reports created");
-//        }
 
         Long curriculumId = studentReports.get(0).getCurriculumId();
         for (StudentReport studentReport : studentReports) {
