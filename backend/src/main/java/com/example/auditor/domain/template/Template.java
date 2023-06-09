@@ -1,6 +1,7 @@
 package com.example.auditor.domain.template;
 
 
+import com.example.auditor.EncryptionConverter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,7 +20,9 @@ public class Template {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
+    @Convert(converter = EncryptionConverter.class)
     private String topic;
 
+    @Convert(converter = EncryptionConverter.class)
     private String body;
 }
