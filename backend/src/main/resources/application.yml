@@ -5,6 +5,9 @@ spring:
   datasource:
     # url: jdbc:h2:mem:testdb
     url: ${DB_URL:jdbc:h2:file:./db}
+    initialization-mode: always
+    schema:
+        - classpath:schema.sql
   data:
     jpa:
       repositories:
