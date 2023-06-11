@@ -45,12 +45,13 @@ export default {
 
       post(
           this,
-          '/login',
+          '/authenticate',
           data,
           async response => {
-            if (response.data.success) {
+            if (response.data.token != null) {
               await this.login(data);
               if (this.isAuthenticated) {
+                localStorage.setItem("token", response.data.token)
                 this.$router.push('/');
               } else {
                 alert('Authentication failed');

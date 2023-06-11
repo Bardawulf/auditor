@@ -67,7 +67,7 @@
             </span>
     </p>
     <ol class="c4 lst-kix_dmky6hc97wan-0" start="8">
-      <li class="c3 c5 li-bullet-0"><span class="c1">&ldquo;Clear&rdquo; removes the report and all of the user mappings</span></li>
+      <li class="c3 c5 li-bullet-0"><span class="c1">&ldquo;Clear&rdquo; removes the report and all of the dbUser mappings</span></li>
     </ol>
     <p class="c3 c7 c8"><span class="c1"></span></p>
     <p class="c3">
