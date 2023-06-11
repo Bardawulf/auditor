@@ -89,13 +89,13 @@
           {{ data.item.major }} {{ data.item.year }}
         </template>
       </v-select>
-      <v-btn color="success" @click="buildReport()">
+      <v-btn color="success" @click="buildReport()" :disabled="!selectedCurriculum">
         Create
       </v-btn>
     </v-row>
 
     <!--Provide a reminder tool that will, depending on the term of the student, display which classes should the student take to be on time.-->
-    <v-row>
+    <v-row v-if="showGradesOnly">
       <v-col cols="12" md="6">
         <base-material-card v-if="tableInfo.unmappedRequirements && tableInfo.unmappedRequirements.length > 0"
           icon="mdi-bell-plus" :title="'Should take in ' + currentSemesterString" class="px-5 py-3">
@@ -173,66 +173,62 @@
       </v-col>
     </v-row>
 
-    <base-material-card v-if="tableInfo.completeRequirements && tableInfo.completeRequirements.length > 0"
-      icon="mdi-text-box-check" title="Audit" class="px-5 py-3">
-      <v-simple-table>
-        <thead>
-          <tr>
-            <th><input class="mr-3" type="checkbox" @click="selectAll" v-model="allSelected"
-                :disabled="unmappingDisabled" /></th>
-            <th class="primary--text display-1">Required Course</th>
-            <th class="primary--text display-1">Credits</th>
-            <th class="primary--text display-1">Taken</th>
-            <th class="primary--text display-1">Credits</th>
-            <th class="primary--text display-1">Grade Points</th>
-            <th class="primary--text display-1">Letter Grade</th>
-            <!--          <th class="primary&#45;&#45;text display-1">Semester</th>-->
-          </tr>
-        </thead>
+    <base-material-card icon="mdi-text-box-check" :title="getCardTitle" class="px-5 py-3">
+  <v-simple-table>
+    <thead v-if="showGradesOnly">
+      <tr>
+        <th>
+          <input class="mr-3" type="checkbox" @click="selectAll" v-model="allSelected" :disabled="unmappingDisabled" />
+        </th>
+        <th class="primary--text display-1">Required Course</th>
+        <th class="primary--text display-1">Credits</th>
+        <th  class="primary--text display-1">Taken</th>
+        <th  class="primary--text display-1">Credits</th>
+        <th  class="primary--text display-1">Grade Points</th>
+        <th  class="primary--text display-1">Letter Grade</th>
+      </tr>
+    </thead>
+    <thead v-if="!showGradesOnly">
+      <tr>
+        <th class="primary--text display-1">Course</th>
+        <th  class="primary--text display-1">Letter Grade</th>
+      </tr>
+    </thead>
 
-        <tbody>
-          <tr v-for="course in tableInfo.completeRequirements" :key="course.id"
-            @click.stop="allRowCheckbox(map2unmap, course.requirement.id)">
-            <td><input type="checkbox" :value=course.requirement.id v-model="map2unmap" :disabled="unmappingDisabled" />
-            </td>
-            <td>
-              {{ course.requirement.name }}
-            </td>
-            <td>
-              {{ course.requirement.credit }}
-            </td>
-            <td>
-              <div v-if="course.course.code === course.requirement.patterns">
-                <v-icon color="success" class="mx-1">
-                  mdi-checkbox-marked-circle-outline
-                </v-icon>
-              </div>
-              <div v-else-if="course.course.code">
-                {{ course.course.code }}
-              </div>
-            </td>
-            <td>
-              {{ course.course.credits }}
-            </td>
-            <td>
-              {{ course.course.gradePoint }}
-            </td>
-            <td>
-              {{ course.course.letterGrade }}
-            </td>
-            <!--          <td>-->
-            <!--            {{ course.requirement.semester }}-->
-            <!--          </td>-->
-          </tr>
-          <!--        <tr>-->
-          <!--          <td></td>-->
-          <!--          <td class="font-weight-bold">Total Credits</td>-->
-          <!--          <td class="font-weight-bold">{{totalCredits}}</td>-->
-          <!--        </tr>-->
-        </tbody>
-      </v-simple-table>
-    </base-material-card>
-    <v-row>
+    <tbody v-if="tableInfo.completeRequirements && tableInfo.completeRequirements.length > 0 && showGradesOnly">
+      <tr v-for="course in tableInfo.completeRequirements" :key="course.id"
+        @click.stop="allRowCheckbox(map2unmap, course.requirement.id)">
+        <td>
+          <input type="checkbox" :value="course.requirement.id" v-model="map2unmap" :disabled="unmappingDisabled" />
+        </td>
+        <td>{{ course.requirement.name }}</td>
+        <td>{{ course.requirement.credit }}</td>
+        <td>
+          <div v-if="course.course.code === course.requirement.patterns">
+            <v-icon color="success" class="mx-1">mdi-checkbox-marked-circle-outline</v-icon>
+          </div>
+          <div v-else-if="course.course.code">{{ course.course.code }}</div>
+        </td>
+        <td >{{ course.course.credits }}</td>
+        <td >{{ course.course.gradePoint }}</td>
+        <td >{{ course.course.letterGrade }}</td>
+      </tr>
+    </tbody>
+
+    <tbody v-if="tableInfo.completeRequirements && tableInfo.completeRequirements.length > 0 && !showGradesOnly">
+  <tr v-for="course in tableInfo.completeRequirements" :key="course.id" @click.stop="allRowCheckbox(map2unmap, course.requirement.id)">
+    <td>{{ course.requirement.name }}</td>
+    <td>{{ course.course.letterGrade }}</td>
+  </tr>
+</tbody>
+
+
+  </v-simple-table>
+</base-material-card>
+    
+
+
+    <v-row v-if="showGradesOnly">
       <v-col cols="12" md="6">
         <base-material-card v-if="tableInfo.unmappedRequirements && tableInfo.unmappedRequirements.length > 0"
           icon="mdi-text-box-remove" title="Unmapped requirements" class="px-5 py-3">
@@ -303,7 +299,7 @@
       </v-col>
     </v-row>
 
-    <v-row>
+    <v-row v-if="showGradesOnly">
       <v-col cols="12" md="6">
         <base-material-card v-if="tableInfo.failedCourses && tableInfo.failedCourses.length > 0" icon="mdi-text-box-plus"
           title="Failed courses" class="px-5 py-3">
@@ -347,7 +343,7 @@
           </v-icon>
         </v-btn>
       </v-col>
-      <v-col cols="3" md="2">
+      <v-col  v-if="showGradesOnly" cols="3" md="2">
         <v-btn v-if="tableInfo !== ''" color="error" @click="del = true, dialog = true">
           Clear
           <v-icon>
@@ -403,13 +399,13 @@
         </v-card-title>
 
         <v-card-text class="text-center">
-          {{
-            del ? 'Are you sure you want to delete?' : (map2unmap.length > 0 ? 'Are you sure you want to unmap the selected
-                    row(s) ? ' : (unmappedReq.length !== 0 && unmappedCourse.length !== 0 ? 'Are you sure you want to map the
-          selected
-                    courses to the selected requirements ? ' : 'Nothing selected or incorrect selection!'))
-          }}
-        </v-card-text>
+  {{
+    del ? 'Are you sure you want to delete?' :
+      (map2unmap.length > 0 ? 'Are you sure you want to unmap the selected row(s)?' :
+        (unmappedReq.length !== 0 && unmappedCourse.length !== 0 ? 'Are you sure you want to map the selected courses to the selected requirements?' :
+          'Nothing selected or incorrect selection!'))
+  }}
+</v-card-text>
 
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -434,16 +430,17 @@ import _ from "lodash";
 
 export default {
   name: 'StudentAudit',
-  props: ['id'],
+  props: ['id', 'students'],
+  
 
   data() {
     return {
+      showGradesOnly: true,
       taken: 0,
       earned: 0,
       student: {},
       semesterGPAchart: {},
       tableInfo: '',
-      selectedCurriculum: null,
       curriculums: [],
       selectedCurriculum: "",
       map2unmap: [],
@@ -460,6 +457,14 @@ export default {
     }
   },
   computed: {
+    getCardTitle() {
+      // Your condition to determine the title dynamically
+      if (this.showGradesOnly) {
+        return "Audit";
+      } else {
+        return "Grades";
+      }
+    },
     currentSemesterString: function () {
       var s = this.student;
       var admSem = s.admissionSemester;
@@ -498,6 +503,9 @@ export default {
     selectedCurriculum() {
       this.updateSelectedCurriculum();
     },
+    isCreateButtonDisabled() {
+    return this.selectedCurriculum!="";
+  }
   },
 
   methods: {
@@ -569,6 +577,7 @@ export default {
       });
     },
     buildReport() {
+      this.showGradesOnly = true;
       let data = {
         curriculumId: this.selectedCurriculum,
         studentId: this.student.id
@@ -577,9 +586,7 @@ export default {
       post(this, '/report', data, response => {
         this.tableInfo = response.data;
         this.$store.dispatch('setSnackbar', { text: "Success" })
-      }, error => {
-        this.$store.dispatch('setSnackbar', { text: error, color: "error" });
-      });
+      },);
     },
     updateSelectedCurriculum() {
       // Store the selected curriculum in localStorage
@@ -650,12 +657,8 @@ export default {
       });
     },
     removeAudit() {
-      del(this, '/report/' + this.$route.params.id, '', () => {
-        this.tableInfo = '';
-        this.$store.dispatch('setSnackbar', { text: "Success" });
-      }, error => {
-        this.$store.dispatch('setSnackbar', { text: error, color: "error" });
-      });
+      this.showGradesOnly = false;
+      this.selectedCurriculum="";
     }
   },
 
@@ -664,15 +667,18 @@ export default {
     this.getCurriculums()
     this.getSemesterChart()
     this.getReport()
+    this.buildReport()
+    this.showGradesOnly = false;
   },
 
 
   mounted() {
-    // Retrieve the selected curriculum from localStorage
-    const storedSelectedCurriculum = localStorage.getItem('selectedCurriculum');
-    if (storedSelectedCurriculum) {
-      this.selectedCurriculum = JSON.parse(storedSelectedCurriculum);
-    }
+    this.getInfo()
+    this.getCurriculums()
+    this.getSemesterChart()
+    this.getReport()
+    this.buildReport()
+    this.showGradesOnly = false;
   },
 
 }
