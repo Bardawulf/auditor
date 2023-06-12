@@ -1,6 +1,7 @@
 package com.example.auditor.domain.transcript;
 
 
+import com.example.auditor.EncryptionConverter;
 import com.example.auditor.service.transcript.parser.LetterGrade.LetterGradeModifiedInstance;
 import com.example.auditor.service.transcript.parser.LetterGrade.LiteralNotMatchedException;
 import lombok.AllArgsConstructor;
@@ -21,10 +22,16 @@ public class TermCourse {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
+
+    @Convert(converter = EncryptionConverter.class)
     private String code;
     private Integer credits;
     private Double gradePoint;
+
+    @Convert(converter = EncryptionConverter.class)
     private String letterGradeLiteral;
+
+    @Convert(converter = EncryptionConverter.class)
     private String letterGradeModifierLiteral;
 
     @Transient

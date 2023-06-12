@@ -1,6 +1,7 @@
 package com.example.auditor.domain.report;
 
 
+import com.example.auditor.EncryptionConverter;
 import com.example.auditor.domain.curriculum.Requirement;
 import com.example.auditor.domain.transcript.TermCourse;
 import lombok.AllArgsConstructor;
@@ -20,9 +21,13 @@ public class ReportTermCourse {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
+
+    @Convert(converter = EncryptionConverter.class)
     private String code;
     private Integer credits;
     private Double gradePoint;
+
+    @Convert(converter = EncryptionConverter.class)
     private String letterGrade;
 
     public static ReportTermCourse fromTranscriptTermCourse(TermCourse termCourse) {

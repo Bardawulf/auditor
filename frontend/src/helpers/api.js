@@ -12,12 +12,23 @@ else if (mode == 'heroku') {
 import qs from 'qs'
 
 export function post(_this, url, payload, successCallback, errorCallback, headers = '') {
+    const token = localStorage.getItem('token');
+    const authorizationHeader = { Authorization: `Bearer ${token}` };
+
+    let parsedHeaders = {};
+    try {
+        parsedHeaders = JSON.parse(headers);
+    } catch (error) {
+        console.error('Error parsing headers:', error);
+    }
+
+    const mergedHeaders = { ...parsedHeaders, ...authorizationHeader };
 
     return axios({
         method: 'POST',
         url: url,
         data: payload,
-        headers: headers
+        headers: mergedHeaders
     }).then(response => {
         successCallback( response );
     }).catch(error => {
@@ -30,7 +41,10 @@ export function post(_this, url, payload, successCallback, errorCallback, header
 }
 
 export function get(_this, url, payload, successCallback, errorCallback) {
-    let headers = '';
+    const token = localStorage.getItem('token');
+    const headers = {
+        Authorization: `Bearer ${token}`,
+    };
 
     return axios({
         method: 'GET',
@@ -50,7 +64,10 @@ export function get(_this, url, payload, successCallback, errorCallback) {
 
 
 export function del(_this, url, payload, successCallback, errorCallback) {
-    let headers = '';
+    const token = localStorage.getItem('token');
+    const headers = {
+        Authorization: `Bearer ${token}`,
+    };
 
     return axios({
         method: 'DELETE',
@@ -68,10 +85,15 @@ export function del(_this, url, payload, successCallback, errorCallback) {
 }
 
 export function download(_this, url, payload, successCallback, errorCallback) {
+    const token = localStorage.getItem('token');
+    const headers = {
+        Authorization: `Bearer ${token}`,
+    };
 
     axios({
         method: 'get',
         url: url,
+        headers: headers,
         responseType: 'arraybuffer'
     })
         .then(response => {

@@ -29,7 +29,7 @@ export default {
     };
   },
   methods: {
-    // Use the mapActions helper to access the login action from Vuex
+    // Use the mapActions helper to access the auth action from Vuex
     ...mapActions(['login']),
     async handleLogin() {
       // Check if the user is already authenticated
@@ -45,12 +45,13 @@ export default {
 
       post(
           this,
-          '/login',
+          '/authenticate',
           data,
           async response => {
-            if (response.data.success) {
+            if (response.data.token != null) {
               await this.login(data);
               if (this.isAuthenticated) {
+                localStorage.setItem("token", response.data.token)
                 this.$router.push('/');
               } else {
                 alert('Authentication failed');
