@@ -1,5 +1,6 @@
 package com.example.auditor.domain.report;
 
+import com.example.auditor.EncryptionConverter;
 import com.example.auditor.domain.curriculum.Requirement;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,11 +21,18 @@ public class ReportRequirement {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
+    @Convert(converter = EncryptionConverter.class)
     private String name;
+
+    @Convert(converter = EncryptionConverter.class)
     private String patterns;
+
+    @Convert(converter = EncryptionConverter.class)
     private String antipatterns;
     private Integer credit;
     private Integer semester;
+
+    @Convert(converter = EncryptionConverter.class)
     private String type;
 
 

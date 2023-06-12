@@ -1,5 +1,6 @@
 package com.example.auditor.domain.curriculum;
 
+import com.example.auditor.EncryptionConverter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,6 +21,7 @@ public class Curriculum {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
+    @Convert(converter = EncryptionConverter.class)
     private String major;
     private Integer year;
 

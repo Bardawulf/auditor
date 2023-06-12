@@ -14,7 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -26,6 +29,8 @@ public class TranscriptService {
     private final StudentRecordRepository studentRecordRepository;
     private final BeanFactory beanFactory;
 
+    private static final String ENCRYPTION_KEY = "This-is-your-key"; // Replace with your encryption key
+
     public StudentRecord createTranscript(MultipartFile file) throws IOException {
         PDDocument document = PDDocument.load(file.getInputStream());
         PDFTextStripper stripper = beanFactory.getBean(PDFTextStripper.class);
@@ -34,15 +39,25 @@ public class TranscriptService {
 
         document.close();
 
-        return studentRecordRepository.save(tParser.buildStudentRecord());
+        StudentRecord studentRecord = tParser.buildStudentRecord();
+        studentRecord.setSchoolName(encrypt(studentRecord.getSchoolName()));
+        studentRecord.setMajor(encrypt(studentRecord.getMajor()));
+        studentRecord.setAdmissionSemester(encrypt(studentRecord.getAdmissionSemester()));
+        studentRecord.setName(encrypt(studentRecord.getName()));
+
+        return studentRecordRepository.save(studentRecord);
     }
 
     public List<StudentRecord> getAll() {
-        return studentRecordRepository.findAll();
+        List<StudentRecord> records = studentRecordRepository.findAll();
+        decryptStudentRecords(records);
+        return records;
     }
 
     public Optional<StudentRecord> getByStudentId(Long id) {
-        return studentRecordRepository.findById(id);
+        Optional<StudentRecord> optionalRecord = studentRecordRepository.findById(id);
+        optionalRecord.ifPresent(this::decryptStudentRecord);
+        return optionalRecord;
     }
 
     public void deleteById(Long id) {
@@ -60,7 +75,6 @@ public class TranscriptService {
                 .map(Optional::get)
                 .collect(Collectors.toList());
     }
-
 
     public Map<Object, Object> getByStudentIdsGraph(Long[] ids) {
         Map<Object, Object> resultMap = new HashMap<>();
@@ -81,68 +95,84 @@ public class TranscriptService {
                 .sorted((term1, term2) -> {
                     var term1Lowercase = term1.toLowerCase().strip();
                     var term2Lowercase = term2.toLowerCase().strip();
-                    var term1Year = term1Lowercase.split(" ")[1].strip();
-                    var term2Year = term2Lowercase.split(" ")[1].strip();
-                    var term1Season = term1Lowercase.split(" ")[0].strip();
-                    var term2Season = term2Lowercase.split(" ")[0].strip();
 
-                    if (!term1Year.equals(term2Year)) {
-                        return term1Year.compareTo(term2Year);
-                    } else {
-                        return TermTypeOrder.getFromString(term1Season)
-                                .compareTo(TermTypeOrder.getFromString(term2Season));
+                    var term1Year = Integer.parseInt(term1Lowercase.substring(term1Lowercase.length() - 4));
+                    var term2Year = Integer.parseInt(term2Lowercase.substring(term2Lowercase.length() - 4));
+
+                    var term1Season = term1Lowercase.substring(0, term1Lowercase.length() - 4).strip();
+                    var term2Season = term2Lowercase.substring(0, term2Lowercase.length() - 4).strip();
+
+                    var yearComparison = Integer.compare(term2Year, term1Year);
+                    if (yearComparison != 0) {
+                        return yearComparison;
                     }
+
+                    var seasonComparison = getSeasonOrder(term2Season) - getSeasonOrder(term1Season);
+                    if (seasonComparison != 0) {
+                        return seasonComparison;
+                    }
+
+                    return term2.compareTo(term1);
                 })
                 .collect(Collectors.toList());
 
-        var studentTerms = records
-                .stream()
-                .collect(
-                        Collectors.toMap(StudentRecord::getId,
-                                y -> y.getStudentTerms()
-                                        .stream()
-                                        .map(StudentTerm::getName)
-                                        .collect(Collectors.toList())
-                        )
-                );
-        var students = records
-                .stream()
-                .map(StudentRecord::getId)
-                .collect(Collectors.toList());
-        var studentNames = records
-                .stream()
-                .map(StudentRecord::getName)
-                .collect(Collectors.toList());
-        var studentToTerm = records
-                .stream()
-                .collect(
-                        Collectors.toMap(StudentRecord::getId,
-                                y -> y.getStudentTerms()
-                                        .stream()
-                                        .map(
-                                                x -> Map.of("termName", x.getName(),
-                                                        "termGpa", x.getTermGpa())
-                                        )
-                                        .collect(Collectors.toList())
-                        )
-                );
-
         resultMap.put("terms", terms);
-        resultMap.put("graph", studentToTerm);
-        resultMap.put("students", students);
-        resultMap.put("studentNames", studentNames);
-        resultMap.put("studentTerms", studentTerms);
+        resultMap.put("records", records);
 
         return resultMap;
     }
 
-}
-
-enum TermTypeOrder {
-    spring, summer, fall;
-
-    public static TermTypeOrder getFromString(String string) {
-        return valueOf(string.toLowerCase());
+    private int getSeasonOrder(String season) {
+        switch (season.toLowerCase()) {
+            case "spring":
+                return 1;
+            case "summer":
+                return 2;
+            case "fall":
+                return 3;
+            case "winter":
+                return 4;
+            default:
+                return 5;
+        }
     }
 
+    private void decryptStudentRecord(StudentRecord record) {
+        record.setSchoolName(decrypt(record.getSchoolName()));
+        record.setMajor(decrypt(record.getMajor()));
+        record.setAdmissionSemester(decrypt(record.getAdmissionSemester()));
+        record.setName(decrypt(record.getName()));
+    }
+
+    private void decryptStudentRecords(List<StudentRecord> records) {
+        for (StudentRecord record : records) {
+            decryptStudentRecord(record);
+        }
+    }
+
+    private String encrypt(String attribute) {
+        try {
+            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+            SecretKeySpec secretKey = new SecretKeySpec(ENCRYPTION_KEY.getBytes(StandardCharsets.UTF_8), "AES");
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+            byte[] encryptedBytes = cipher.doFinal(attribute.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(encryptedBytes);
+        } catch (Exception e) {
+            log.error("Encryption error: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Encryption error");
+        }
+    }
+
+    private String decrypt(String dbData) {
+        try {
+            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+            SecretKeySpec secretKey = new SecretKeySpec(ENCRYPTION_KEY.getBytes(StandardCharsets.UTF_8), "AES");
+            cipher.init(Cipher.DECRYPT_MODE, secretKey);
+            byte[] decryptedBytes = cipher.doFinal(Base64.getDecoder().decode(dbData));
+            return new String(decryptedBytes, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            log.error("Decryption error: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Decryption error");
+        }
+    }
 }
