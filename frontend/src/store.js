@@ -32,8 +32,8 @@ export default new Vuex.Store({
       commit('SET_SNACKBAR', snackbar);
     },
     login({ commit }) {
-      // Perform login logic, e.g., making an API call and checking credentials
-      // If login is successful, set isAuthenticated to true
+      // Perform auth logic, e.g., making an API call and checking credentials
+      // If auth is successful, set isAuthenticated to true
       commit('SET_AUTHENTICATED', true);
     },
     logout({ commit }) {

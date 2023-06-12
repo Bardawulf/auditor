@@ -85,7 +85,7 @@ export const router = new Router({
         },
         {
           name: 'Login',
-          path: '/login',
+          path: '/auth',
           component: () => import('@/views/Login/Login'),
         },
       ],

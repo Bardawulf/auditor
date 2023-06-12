@@ -1,6 +1,4 @@
-package com.example.auditor.controller.login;
-
-import java.util.Objects;
+package com.example.auditor.controller.auth;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

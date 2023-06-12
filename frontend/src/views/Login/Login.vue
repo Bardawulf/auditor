@@ -29,7 +29,7 @@ export default {
     };
   },
   methods: {
-    // Use the mapActions helper to access the login action from Vuex
+    // Use the mapActions helper to access the auth action from Vuex
     ...mapActions(['login']),
     async handleLogin() {
       // Check if the user is already authenticated
